@@ -40,7 +40,7 @@ motif_probability <- function(motif, hsmm) {
   ### Forward algorithm recursion
   for (t in 2:n_events) { # For each time step
     emission_prob <- emission_probability_within_range(motif[t,]$Amin, motif[t,]$Amax, acceleration_params)
-    duration_prob <- calculate_duration_probability(motif[t,]$length, lambda)
+    duration_prob <- duration_probability(motif[t,]$length, lambda)
     
     for (j in 1:n_states) { # For each state
       # Calculate the sum for transitioning from all possible states to the current state (j) at the previous time step (t-1)
