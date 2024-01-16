@@ -8,8 +8,8 @@ sequencedir <- paste0(datadir, "/data/sequences")
 
 # Load all scripts
 # This can be replaced by the package install later on...
-my_functions_folder = "~/Documents/Work MacBook Pro Annelinde/My Little Moves (MLM)/Sequence mapping/Physical behavior patterns/motif-probability/R"
-for (function_file in dir(my_functions_folder, full.names = T)) source(function_file) #load functions
+my_functions_folder = "/Users/annelindelettink/Documents/Work MacBook Pro Annelinde/My Little Moves (MLM)/Sequence mapping/Physical behavior patterns/motif-probability/R"
+for (function_file in dir(my_functions_folder, full.names = F)) source(function_file) #load functions
 
 ### 1 ) Define motif (i.e. a sequence of events, each characterised by their acceleration range and length)
 # Article example input
@@ -43,12 +43,17 @@ for(acc in 1:length(Lb.long)){
 colnames(motif.alternating) <- c("Amin", "Amax", "length")
 colnames(motif.long) <- c("Amin", "Amax", "length")
 
-### 2 ) Load the fitted hsmm
-# TO DO: for multiple participants
-filelist <- list.files(sequencedir, pattern = ".RData")
-load(paste0(sequencedir, "/", filelist[1]))
+### 2) Apply forward algorithm for motif probability calculation
 
-### 3) Apply forward algorithm for motif probability calculation
-prob_long <- motif_probability(motif.long, hsmms)
-prob_alternating <- motif_probability(motif.alternating, hsmms)
+# For each participant load the fitted hsmm
+filelist <- list.files(sequencedir, pattern = ".RData")
+
+prob_long <- c()
+prob_alternating <- c()
+
+for(pp in 1:length(filelist)){
+  load(paste0(sequencedir, "/", filelist[pp]))
+  prob_long <- c(prob_long, motif_probability(motif.long, hsmms))
+  prob_alternating <- c(prob_alternating, motif_probability(motif.alternating, hsmms))
+}
 
