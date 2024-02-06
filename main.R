@@ -50,10 +50,13 @@ filelist <- list.files(sequencedir, pattern = ".RData")
 
 prob_long <- c()
 prob_alternating <- c()
+id <- c()
 
 for(pp in 1:length(filelist)){
   load(paste0(sequencedir, "/", filelist[pp]))
+  id <- c(id, strsplit(filelist[pp], "_")[[1]][1])
   prob_long <- c(prob_long, motif_probability(motif.long, hsmms))
   prob_alternating <- c(prob_alternating, motif_probability(motif.alternating, hsmms))
 }
 
+probabilities <- cbind(id, prob_long, prob_alternating)

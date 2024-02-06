@@ -1,6 +1,6 @@
 ## This script: 
-# 1) Prepares the raw gt3x accelerometer data files for which data on BMI is available; 
-# 2) Converts these files to epoch level data;
+# 1) Converts the old gt3x files to csv for compatibility with GGIR;
+# 1) Selects the raw accelerometer data files for which data on BMI is available; 
 # 3) Selects valid data only
 
 # Tabula rasa
@@ -8,29 +8,37 @@ rm(list=ls())
 gc()
 
 # Load all scripts
-my_functions_folder = "~/Documents/Work MacBook Pro Annelinde/My Little Moves (MLM)/Sequence mapping/Physical behavior patterns/sequence-probability/functions"
+my_functions_folder = "~/Documents/Work MacBook Pro Annelinde/My Little Moves (MLM)/Sequence mapping/Physical behavior patterns/motif-probability/R"
 for (function_file in dir(my_functions_folder, full.names = T)) source(function_file) #load functions
 
 # User settings
-spssDir <- "/Users/annelindelettink/GECKO/deel1"
-accDirGT3X <- "/Users/annelindelettink/GECKO/rawinput" # TO DO: set this to the folder containing the raw .gt3x data!
+spssdir <- "/Users/annelindelettink/GECKO/deel1"
+accdir <- "/Users/annelindelettink/GECKO/rawinput"
+
 
 # Libraries
 library(haven)
 library(GGIR)
 
-### STEP 1) Prepare the raw gt3x accelerometer data files for which data on BMI is available; 
-spssData <- read_sav(paste(spssDir, "Data_GECKO_MyLittleMoves_Deel1_2020-10-22.sav", sep = "/")) #antropometrics
+### STEP 1) Convert the old gt3x files to csv data
+## TO DO: hiervoor nog de stap omzetten oude gt3x naar csv so GGIR can handle the files
+list.gt3x <- list.files("/Users/annelindelettink/GECKO/rawinput", pattern = ".gt3x")
+for(file in 1:length(list.gt3x)){
+  gt3x_to_csv(paste0("/Users/annelindelettink/GECKO/rawinput", "/", list.gt3x[file]))
+}
+
+### STEP 2) Prepare the raw accelerometer data files for which data on BMI is available; 
+spssdata <- read_sav(paste(spssdir, "Data_GECKO_MyLittleMoves_Deel1_2020-10-22.sav", sep = "/")) #antropometrics
 
 # Select antrophometrics for which accelerometer data is available
 #accFilesgt3x <- list.files(accDirGT3X, pattern = ".gt3x")
-accFilesgt3x <- list.files(accDirGT3X, pattern = ".csv")
+accfiles <- list.files(accdir, pattern = ".csv")
 GECKOid <- c() # Abbreviate participant id from accelerometer data to correspond with SPSS data
-for (file in 1:length(accFilesgt3x)) {
-  GECKOid <- c(GECKOid, strsplit(accFilesgt3x[file], "_")[[1]][1])
+for (file in 1:length(accfiles)) {
+  GECKOid <- c(GECKOid, strsplit(accfiles[file], "_")[[1]][1])
 }
-spssDataAcc <- spssData[which(spssData$GKNO %in% GECKOid),] # select the data
-rm(spssData)
+spssDataAcc <- spssdata[which(spssdata$GKNO %in% GECKOid),] # select the data
+rm(spssdata)
 
 # Check which participants have complete data for BMI at age 5
 Rbmi <- union(which(is.na(spssDataAcc$LENGTE_217)), which(is.na(spssDataAcc$GEWICHT_217)))
@@ -44,10 +52,10 @@ completePP <- spssDataAccBMI$GKNO
 
 #Copy acc files with data on BMI to new folder: rawinput
 filestocopy <- c()
-for (accfile in 1:length(accFilesgt3x)) {
-  index <- which(startsWith(accFilesgt3x[accfile], completePP) == TRUE)
+for (accfile in 1:length(accfiles)) {
+  index <- which(startsWith(accfiles[accfile], completePP) == TRUE)
   if(length(index) > 0){
-    filestocopy <- c(filestocopy, accFilesgt3x[accfile])
+    filestocopy <- c(filestocopy, accfiles[accfile])
   }
 }
 
@@ -74,12 +82,12 @@ rm(next_measurement, measurement, next_pp, start_pp, subj)
 
 # Reasons for exclusion; following syntax/reasoning from GECKO cohort
 remove <- c()
-remove <- c(remove, which(filestocopy == "1168-1_31-5-2013 (2013-06-27).gt3x")) # downloaded twice
-remove <- c(remove, which(filestocopy == "1735-1_11APR12 (2012-05-29).gt3x")) # something went wrong with data, measured again; remove first try
-remove <- c(remove, which(filestocopy == "3074-1_15sept11 (2011-10-14).gt3x")) # data parents and actilife do not correspond, therefore other day was measured
-remove <- c(remove, which(filestocopy == "3473-1_28juni11 (2011-08-01).gt3x")) # went in washing machine, new accelerometer was sent
-remove <- c(remove, which(filestocopy == "3960-1_06mei11 (2011-05-24).gt3x")) # data parents and actilife do not correspond and accelerometer probably worn by someone else, therefore other day was measured
-remove <- c(remove, which(filestocopy == "4292-1_20juli11 (2011-08-05).gt3x")) # informed consent missing 
+remove <- c(remove, which(filestocopy == "1168-1_31-5-2013 (2013-06-27).csv")) # downloaded twice
+remove <- c(remove, which(filestocopy == "1735-1_11APR12 (2012-05-29).csv")) # something went wrong with data, measured again; remove first try
+remove <- c(remove, which(filestocopy == "3074-1_15sept11 (2011-10-14).csv")) # data parents and actilife do not correspond, therefore other day was measured
+remove <- c(remove, which(filestocopy == "3473-1_28juni11 (2011-08-01).csv")) # went in washing machine, new accelerometer was sent
+remove <- c(remove, which(filestocopy == "3960-1_06mei11 (2011-05-24).csv")) # data parents and actilife do not correspond and accelerometer probably worn by someone else, therefore other day was measured
+remove <- c(remove, which(filestocopy == "4292-1_20juli11 (2011-08-05).csv")) # informed consent missing 
 
 files <- c("1168", "1735", "3074", "3473", "3960", "4292")
 double_file_corrected <- double_file[!double_file %in% files]
@@ -92,17 +100,14 @@ newfolder <- "/Users/annelindelettink/GECKO/rawinput"
 dir.create(newfolder, recursive = TRUE)
 file.copy(file.path(accDirGT3X, filestocopy), newfolder)
 
-### STEP 2) Convert these files to epoch level data
-## TO DO: hiervoor nog de stap omzetten oude gt3x naar csv so GGIR can handle the files
-#gt3x_to_csv(newfolder)
 
 # User settings
-storeDir <- "/Users/annelindelettink/Documents/Work MacBook Pro Annelinde/My Little Moves (MLM)/Sequence mapping/Physical behavior patterns/sequence-probability/data"
+storedir <- "/Users/annelindelettink/Documents/Work MacBook Pro Annelinde/My Little Moves (MLM)/Sequence mapping/Physical behavior patterns/sequence-probability/data"
 
 ## Load raw data and calculate metrics for 15-sec epochs
 GGIR::GGIR(
-  datadir = newfolder,
-  outputdir = storeDir, 
+  datadir = accdir,
+  outputdir = storedir, 
   mode = c(1, 2, 3),
   ## Part 1 – raw data processing 
   windowsizes = c(15, 900, 3600), # Epoch length: 15 sec

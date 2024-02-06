@@ -21,7 +21,7 @@
 gzip = FALSE #as.logical(commandArgs(TRUE)[2])
 
 gt3x_to_csv <- function(path, gzip = T){
-  gt3x <- read.gt3x(path = path, imputeZeroes = TRUE, asDataFrame = FALSE, verbose = TRUE)
+  gt3x <- read.gt3x::read.gt3x(path = path, imputeZeroes = TRUE, asDataFrame = FALSE, verbose = TRUE)
   outpath<-gsub(".gt3x", ".csv", path, fixed = T)
   # Convert date formats
   start.time <- unlist(strsplit(as.character(attributes(gt3x)$header$'Start Date'), split = " "))
@@ -49,29 +49,29 @@ gt3x_to_csv <- function(path, gzip = T){
   # Write gravity data
   outdat <- as.matrix(gt3x)
   # Identify lines with 0, 0, 0 and replace them by NA
-  correct1 <- rowsums(outdat)
-  correct2 <- rowMins(outdat, value = T)
+  correct1 <- Rfast::rowsums(outdat)
+  correct2 <- Rfast::rowMins(outdat, value = T)
   outdat[, 1]<- ifelse(correct1 == 0 & correct2 == 0, NA, outdat[, 1])
   outdat[, 2]<- ifelse(correct1 == 0 & correct2 == 0, NA, outdat[, 2])
   outdat[, 3]<- ifelse(correct1 == 0 & correct2 == 0, NA, outdat[, 3])
   # If first line begins with vector of zeros, leaf it as vector of zeros
   if(correct1[1] == 0 & correct2[1] == 0) {outdat[1, ] <- c(0, 0, 0)}
   # replace NA by last value carried forward
-  outdat[, 1] <- LOCF(outdat[, 1])
-  outdat[, 2] <- LOCF(outdat[, 2])
-  outdat[, 3] <- LOCF(outdat[, 3])
+  outdat[, 1] <- DescTools::LOCF(outdat[, 1])
+  outdat[, 2] <- DescTools::LOCF(outdat[, 2])
+  outdat[, 3] <- DescTools::LOCF(outdat[, 3])
   print(paste0("outpath ", outpath))
-  fwrite(x = outdat, file = outpath, col.name = F, append = T)
+  data.table::fwrite(x = outdat, file = outpath, col.name = F, append = T)
   if(gzip == T){
     command <- paste("gzip", outpath)
     system(command)
   }
 }
 
-filenames = dir(path = path, full.names = T)
-filenames = grep(x = filenames,pattern = "gt3x", value = T)
-
-for (i in 1:length(filenames)) {
-  print(filenames[i])
-  gt3x_to_csv(filenames[i])
-}
+# filenames = dir(path = path, full.names = T)
+# filenames = grep(x = filenames,pattern = "gt3x", value = T)
+# 
+# for (i in 1:length(filenames)) {
+#   print(filenames[i])
+#   gt3x_to_csv(filenames[i])
+# }
