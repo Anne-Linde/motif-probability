@@ -33,8 +33,6 @@ motif_probability <- function(motif, hsmm) {
   # Initialize the first column of alpha incorporating emission and duration probabilities
   emission_prob <- emission_probability_within_range(motif[1,]$Amin, motif[1,]$Amax, acceleration_params)
   duration_prob <- duration_probability(motif[1,]$length, lambda)
-  # Vraag: klopt het dat ik ik hier ook initiele kansen meeneem? 
-  # Zo ja, dit zijn dan toch de initiele kansen zoals is gedefinieerd op L23?
   alpha[, 1] <- log(init_probs) + log(emission_prob) + log(duration_prob)
   
   ### Forward algorithm recursion
