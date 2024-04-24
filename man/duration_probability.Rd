@@ -9,16 +9,16 @@ duration_probability(duration, lambda)
 \arguments{
 \item{duration}{The duration for which the probability needs to be calculated.}
 
-\item{lambda}{The lambda parameter of the exponential distribution.}
+\item{lambda}{The parameter of the Poisson distribution.}
 }
 \value{
-The probability of the given duration in the exponential distribution.
+The probability of the given duration in the Poisson distribution.
 }
 \description{
-'duration_probability' Calculates the probability of a certain duration in an exponential distribution, with a given duration and lambda parameter
+'duration_probability' Calculates the probability of a certain duration in a Poisson distribution, with a given duration and lambda parameter
 }
 \examples{
-Calculate the probability of duration 2 in an exponential distribution with lambda = 0.5
-duration_probability
+Calculate the probability of duration of 30 sec (model was trained on 15-sec epoch data) in a Poisson distribution with lambda = 0.5
+#duration_probability(duration = 2, lambda = 0.5)
 
 }
