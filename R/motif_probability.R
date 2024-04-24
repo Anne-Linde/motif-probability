@@ -36,15 +36,17 @@ motif_probability <- function(motif, hsmm) {
   alpha[, 1] <- log(init_probs) + log(emission_prob) + log(duration_prob)
   
   ### Forward algorithm recursion
-  for (t in 2:n_events) { # For each time step
-    emission_prob <- emission_probability_within_range(motif[t,]$Amin, motif[t,]$Amax, acceleration_params)
-    duration_prob <- duration_probability(motif[t,]$length, lambda)
-    
-    for (j in 1:n_states) { # For each state
-      # Calculate the sum for transitioning from all possible states to the current state (j) at the previous time step (t-1)
-      sum_previous_alphas <- sum(exp(alpha[j, t-1] + log(transition_matrix[, j])))
-      # Update the alpha value for state 'j' at time step 't'; calculate forward probability for that state (j) at time t considering the probabilities of transitioning from all previous states, multiplied by their respective sojourn distributions, and the emission probability of the current observation.
-      alpha[j, t] <- log(sum_previous_alphas) + log(emission_prob[j]) + log(duration_prob[j])
+  if(n_events > 1){ # if motif has multiple events
+    for (t in 2:n_events) { # For each time step
+      emission_prob <- emission_probability_within_range(motif[t,]$Amin, motif[t,]$Amax, acceleration_params)
+      duration_prob <- duration_probability(motif[t,]$length, lambda)
+      
+      for (j in 1:n_states) { # For each state
+        # Calculate the sum for transitioning from all possible states to the current state (j) at the previous time step (t-1)
+        sum_previous_alphas <- sum(exp(alpha[j, t-1] + log(transition_matrix[, j])))
+        # Update the alpha value for state 'j' at time step 't'; calculate forward probability for that state (j) at time t considering the probabilities of transitioning from all previous states, multiplied by their respective sojourn distributions, and the emission probability of the current observation.
+        alpha[j, t] <- log(sum_previous_alphas) + log(emission_prob[j]) + log(duration_prob[j])
+      }
     }
   }
   
