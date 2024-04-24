@@ -16,8 +16,11 @@
 #' @export
 
 emission_probability_within_range <- function(lower_bound, upper_bound, params) {
-  emission_prob_lower <- pnorm(lower_bound, mean = params$mu, sd = sqrt(params$sigma))
-  emisiion_prob_upper <- pnorm(upper_bound, mean = params$mu, sd = sqrt(params$sigma))
-  emission_prob_within_range <- emisiion_prob_upper - emission_prob_lower
-  return(emission_prob_within_range)
+  if (lower_bound > 0){
+    return(pnorm(upper_bound, mean=params$mu, sd=sqrt(params$sigma)) - 
+             pnorm(lower_bound, mean=params$mu, sd=sqrt(params$sigma)))
+  } else {
+    return(pnorm(upper_bound, mean=params$mu, sd=sqrt(params$sigma)) - 
+             pnorm(-Inf, mean=params$mu, sd=sqrt(params$sigma)))
+  }	
 }
