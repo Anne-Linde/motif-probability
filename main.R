@@ -21,86 +21,81 @@ for (function_file in dir(my_functions_folder, full.names = TRUE)) source(functi
 # Check hypotheses (proof of concept): 
 #descriptives <- read.csv(paste0(sequencedir, "//descriptives.csv"), sep = ",")[,-1] # acceleration descriptive statistics
 
-# Motif length: length from minutes to epoch level, lambda was based on 15-sec epoch time series
-epoch_length = 15
-n_epochs_min = 60/epoch_length 
-# higher probability of longer uninterrupted activity is negatively related to BMI
-L.PA_bouts_1_uninterrupted <- c(1) * n_epochs_min
-L.PA_bouts_5_uninterrupted <- c(5) * n_epochs_min
-L.PA_bouts_10_uninterrupted <- c(10) * n_epochs_min
-L.PA_bouts_15_uninterrupted <- c(15) * n_epochs_min
+# Define epoch length
+epoch_length <- 15
+n_epochs_min <- 60 / epoch_length
 
-# higher probability of longer uninterrupted sedentary behavior is positively related to BMI
-L.SB_bouts_10_uninterrupted <- c(10) * n_epochs_min
-L.SB_bouts_20_uninterrupted <- c(20) * n_epochs_min
-L.SB_bouts_30_uninterrupted <- c(30) * n_epochs_min
+# Function to create motif data frame
+create_motif <- function(Amin, Amax, length, upper_bound) {
+  return(data.frame(Amin = Amin, Amax = Amax, length = length, upper_bound = upper_bound))
+}
 
-# Motif: acceleration
-Amin.PA = 2.5 #(mean(descriptives$Q3)+ mean(descriptives$Median))/2# Q3
-Amax.PA = 7 #max(descriptives$max) 
+# Function to create motifs for PA bouts
+create_PA_motifs <- function(bout_lengths, upper_bounds, n_epochs_min) {
+  motifs <- list()
+  for (i in seq_along(bout_lengths)) {
+    motifs[[paste0("motif.PA_", bout_lengths[i], "min")]] <- create_motif(Amin.PA, Amax.PA, bout_lengths[i] * n_epochs_min, upper_bounds[i])
+  }
+  return(motifs)
+}
 
-Amin.SB = 0
-Amax.SB = 0.5 #mean(descriptives$Q1)# Q1
+# Function to create motifs for SB bouts
+create_SB_motifs <- function(bout_lengths, upper_bounds, n_epochs_min) {
+  motifs <- list()
+  for (i in seq_along(bout_lengths)) {
+    motifs[[paste0("motif.SB_", bout_lengths[i], "min")]] <- create_motif(Amin.SB, Amax.SB, bout_lengths[i] * n_epochs_min, upper_bounds[i])
+  }
+  return(motifs)
+}
 
-# Motif definition
-motif.PA_0.5min <- data.frame(Amin.PA, Amax.PA, 2)
-colnames(motif.PA_0.5min) <- c("Amin", "Amax", "length")
+# Define acceleration ranges for PA and SB
+Amin.PA <- 2.5
+Amax.PA <- 7
+Amin.SB <- 0
+Amax.SB <- 0.5
 
-motif.PA_1min <- data.frame(Amin.PA, Amax.PA, L.PA_bouts_1_uninterrupted)
-colnames(motif.PA_1min) <- c("Amin", "Amax", "length")
-motif.PA_5min <- data.frame(Amin.PA, Amax.PA, L.PA_bouts_5_uninterrupted)
-colnames(motif.PA_5min) <- c("Amin", "Amax", "length")
-motif.PA_10min <- data.frame(Amin.PA, Amax.PA, L.PA_bouts_10_uninterrupted)
-colnames(motif.PA_10min) <- c("Amin", "Amax", "length")
-motif.PA_15min <- data.frame(Amin.PA, Amax.PA, L.PA_bouts_15_uninterrupted)
-colnames(motif.PA_15min) <- c("Amin", "Amax", "length")
+# Define lengths and upper bounds for PA and SB bouts
+PA_bout_lengths <- c(0.5, 1, 5, 10, 15)
+PA_upper_bounds <- c(1, 5, 10, 15, Inf) # Upper bounds for PA bout lengths
+SB_bout_lengths <- c(10, 20, 30)
+SB_upper_bounds <- c(20, 30, Inf) # Upper bounds for SB bout lengths
 
-motif.SB_10min <- data.frame(Amin.SB, Amax.SB, L.SB_bouts_10_uninterrupted)
-colnames(motif.SB_10min) <- c("Amin", "Amax", "length")
-motif.SB_20min <- data.frame(Amin.SB, Amax.SB, L.SB_bouts_20_uninterrupted)
-colnames(motif.SB_20min) <- c("Amin", "Amax", "length")
-motif.SB_30min <- data.frame(Amin.SB, Amax.SB, L.SB_bouts_30_uninterrupted)
-colnames(motif.SB_30min) <- c("Amin", "Amax", "length")
+# Create motifs for PA and SB bouts
+PA_motifs <- create_PA_motifs(PA_bout_lengths, PA_upper_bounds)
+SB_motifs <- create_SB_motifs(SB_bout_lengths, SB_upper_bounds)
 
-motif.SB_30min.interrupted <- rbind(motif.SB_10min, motif.SB_10min, motif.SB_10min)
+# Combine motifs for SB bouts interrupted and uninterrupted
+motif.SB_30min.interrupted <- do.call(rbind, replicate(3, SB_motifs[["motif.SB_10min"]], simplify = FALSE))
+
+# Print motifs
+print(PA_motifs)
+print(SB_motifs)
+print(motif.SB_30min.interrupted)
 
 ### 2) Apply forward algorithm for motif probability calculation
 
-# For each participant load the fitted hsmm
-filelist <- list.files(sequencedir, pattern = ".RData")
+# Define function to calculate probabilities for motifs
+calculate_probabilities <- function(filelist, sequencedir, motif_definitions) {
+  # Create empty data frame to store probabilities
+  probabilities <- data.frame(id = character())
+  for (pp in 1:length(filelist)) {
+    # Load the fitted hsmm
+    load(paste0(sequencedir, "/", filelist[pp]))
 
-prob_PA_05min <- c()
-prob_PA_5min <- c()
-prob_PA_10min <- c()
-prob_PA_15min <- c()
-
-prob_SB_10min <- c()
-prob_SB_20min <- c()
-prob_SB_30min <- c()
-prob_SB_30min.interrupted <- c()
-
-id <- c()
-
-for(pp in 1:length(filelist)){
-  load(paste0(sequencedir, "/", filelist[pp]))
-  id <- c(id, strsplit(filelist[pp], "_")[[1]][1])
-  prob_PA_05min <- c(prob_PA_05min, motif_probability(motif.PA_0.5min, hsmms))
-  prob_PA_5min <- c(prob_PA_5min, motif_probability(motif.PA_5min, hsmms))
-  prob_PA_10min <- c(prob_PA_10min, motif_probability(motif.PA_10min, hsmms))
-  prob_PA_15min <- c(prob_PA_15min, motif_probability(motif.PA_15min, hsmms))
-  prob_SB_10min <- c(prob_SB_10min, motif_probability(motif.SB_10min, hsmms))
-  prob_SB_20min <- c(prob_SB_20min, motif_probability(motif.SB_20min, hsmms))
-  prob_SB_30min <- c(prob_SB_30min, motif_probability(motif.SB_30min, hsmms))
-  prob_SB_30min.interrupted <- c(prob_SB_30min.interrupted, motif_probability(motif.SB_30min.interrupted, hsmms))
+    # Extract participant ID
+    participant_id <- strsplit(filelist[pp], "_")[[1]][1]
+    # Initialize list to store probabilities for each motif
+    motif_probabilities <- list()
+    for (motif_name in names(motif_definitions)) {
+      motif_probabilities[[motif_name]] <- motif_probability(motif_definitions[[motif_name]], hsmms)
+    }
+    
+    # Append calculated probabilities to the data frame
+    probabilities <- rbind(probabilities, c(id = participant_id, as.numeric(unlist(motif_probabilities))))
+  }
+  
+  return(probabilities)
 }
-
-probabilities.heuristic <- as.data.frame(cbind(id, prob_PA_05min, prob_PA_5min, prob_PA_10min, prob_PA_15min, prob_SB_10min, prob_SB_20min, prob_SB_30min, prob_SB_30min.interrupted))
-probabilities.heuristic <- cbind(probabilities.heuristic$id, dplyr::mutate_all(probabilities.heuristic[,-1], as.numeric))
-colnames(probabilities.heuristic) <- c("id", "PA.05min", "PA.5min", "PA.10min", "PA.15min", "SB.10min", "SB.20min", "SB.30min", "SB.30min.interrupted")
-
-
-
-
 
 
 ### 3) Link zBMI 
@@ -144,23 +139,22 @@ save(probabilities.heuristic, file = paste0(datadir, "/data/motif-probabilities.
 
 # Correlations with zBMI to test hypotheses
 # higher probability of longer uninterrupted activity is negatively related to BMI
-cor.test(probabilities.heuristic$zBMI, exp(as.numeric(probabilities.heuristic$PA.1min)), na.action = "omit")
-cor.test(probabilities.heuristic$zBMI, exp(as.numeric(probabilities.heuristic$PA.5min)), na.action = "omit")
-cor.test(probabilities.heuristic$zBMI, exp(as.numeric(probabilities.heuristic$PA.10min)), na.action = "omit")
-cor.test(probabilities.heuristic$zBMI, exp(as.numeric(probabilities.heuristic$PA.15min)), na.action = "omit")
+cor.test(probabilities.heuristic$zBMI, exp(as.numeric(probabilities.heuristic$PA.05min)), na.action = "omit", method = "kendall")
+cor.test(probabilities.heuristic$zBMI, exp(as.numeric(probabilities.heuristic$PA.1min)), na.action = "omit", method = "kendall")
+cor.test(probabilities.heuristic$zBMI, exp(as.numeric(probabilities.heuristic$PA.5min)), na.action = "omit", method = "kendall")
+cor.test(probabilities.heuristic$zBMI, exp(as.numeric(probabilities.heuristic$PA.10min)), na.action = "omit", method = "kendall")
+cor.test(probabilities.heuristic$zBMI, exp(as.numeric(probabilities.heuristic$PA.15min)), na.action = "omit", method = "kendall")
 
 # higher probability of longer uninterrupted sedentary behavior is positively related to BMI -- NOT TRUE
-cor.test(probabilities.heuristic$zBMI, exp(as.numeric(probabilities.heuristic$SB.10min)), na.action = "omit")
-cor.test(probabilities.heuristic$zBMI, exp(as.numeric(probabilities.heuristic$SB.20min)), na.action = "omit")
-cor.test(probabilities.heuristic$zBMI, exp(as.numeric(probabilities.heuristic$SB.30min)), na.action = "omit")
+cor.test(probabilities.heuristic$zBMI, exp(as.numeric(probabilities.heuristic$SB.10min)), na.action = "omit", method = "kendall")
+cor.test(probabilities.heuristic$zBMI, exp(as.numeric(probabilities.heuristic$SB.20min)), na.action = "omit", method = "kendall")
+cor.test(probabilities.heuristic$zBMI, exp(as.numeric(probabilities.heuristic$SB.30min)), na.action = "omit", method = "kendall")
 
 # higher probability of longer uninterrupted activity different for boys vs girls?
-
 cor.test(probabilities.heuristic$zBMI, exp(as.numeric(probabilities.heuristic$PA.1min)), na.action = "omit")
 cor.test(probabilities.heuristic$zBMI, exp(as.numeric(probabilities.heuristic$PA.5min)), na.action = "omit")
 cor.test(probabilities.heuristic$zBMI, exp(as.numeric(probabilities.heuristic$PA.10min)), na.action = "omit")
 cor.test(probabilities.heuristic$zBMI, exp(as.numeric(probabilities.heuristic$PA.15min)), na.action = "omit")
-
 
 # Differences between boys and girls?
 boys <- subset(probabilities.heuristic, gender == "M")
@@ -183,7 +177,10 @@ cor.test(probabilities.heuristic$zBMI, exp(as.numeric(probabilities.heuristic$PA
 
 
 
+t.test(girls$PA.10min, boys$PA.10min, na.action = "omit", paired = FALSE)
+
 t.test(girls$SB.30min.interrupted, boys$SB.30min.interrupted, na.action = "omit", paired = FALSE)
+
 
 cor.test(probabilities.heuristic$zBMI, exp(as.numeric(probabilities.heuristic$SB.30min.interrupted)), na.action = "omit")
 
