@@ -52,12 +52,9 @@ derive_initialparams <- function(data, n_states, bout_durations = c(60, 30, 15, 
   # Runlength/sojourn distibution
   soj_dur <- bout_durations * 60 / epoch_length # number of epochs for bout durations
   
-  #soj_poisson <- list(lambda = seq(soj_dur[1], soj_dur[length(n_states)], length.out = n_states), 
-  #                   shift = rep(1, n_states), 
-  #                  type = "poisson") 
-  soj_poisson <- list(lambda = seq(soj_dur[1], soj_dur[4], length.out = n_states), 
-                      shift = rep(1, n_states), 
-                      type = "poisson")
+  soj_poisson <- list(lambda = seq(soj_dur[1], soj_dur[length(n_states)], length.out = n_states),
+                    shift = rep(1, n_states),
+                   type = "poisson")
   # soj_gamma <- list(shape = rep((mean(data, na.rm = TRUE)^2)/var(data, na.rm = TRUE), n_states),
   #                   scale = rep((mean(data, na.rm = TRUE)^2)/var(data, na.rm = TRUE), n_states),
   #                   type = "gamma")
