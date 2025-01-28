@@ -120,7 +120,7 @@ library(GGIR)
 #a) Load raw data and calculate metrics for 15-sec epochs separate for each age group, as different cut-points are needed for MVPA
 GGIR::GGIR(
   datadir = "//vumc.nl/afd$/DIV10/POH/Sectie_2/2016_SB and PA pattern analysis/Team Annelinde/Physcial behavior patterns/GECKO data/subset/rawinput_5years_complete_anthro",
-  outputdir = "//vumc.nl/afd$/DIV10/POH/Sectie_2/2016_SB and PA pattern analysis/Team Annelinde/Physical Behavior Patterns/GECKO data/subset/output_rawinput_5years_complete_anthro", # Save the raw data and calculated metrics here
+  outputdir = "//vumc.nl/afd$/DIV10/POH/Sectie_2/2016_SB and PA pattern analysis/Team Annelinde/Physical Behavior Patterns/GECKO data/subset", # Save the raw data and calculated metrics here
   mode = c(1, 2, 3, 4, 5),
   #do.report = c(2, 4, 5),
   do.parallel = FALSE,
@@ -131,7 +131,7 @@ GGIR::GGIR(
   do.hfenplus = TRUE,
   acc.metric = "NeishabouriCount_y",
   ## Part 2 – data quality and descriptive
-  qlevels <- c(c(1380/1440), c(1410/1440), c(1430/1140)),
+  qlevels <- c(c(1380/1440), c(1410/1440), c(1430/1440)),
   includedaycrit = 10,
   mvpathreshold = 890,
   overwrite = FALSE, #do not overwrite data
