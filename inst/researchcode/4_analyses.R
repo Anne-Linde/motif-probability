@@ -86,13 +86,6 @@ X <- data[,-c(20:21)]
 #   d=as.matrix(t(data)), maxK = 10, reps=1000, pItem=0.8, pFeature = 1, clusterAlg="km",title="kmeans_consensus_cluster",
 #   distance="euclidean", seed = 12345, plot = "png", verbose = TRUE)
 
-# Custom function to calculate pairwise complete Euclidean distance (to handle NA values)
-pairwise_dist <- function(x) {
-  dist_matrix <- as.matrix(dist(x, method = "euclidean", diag = TRUE, upper = TRUE))
-  dist_matrix[is.na(dist_matrix)] <- max(dist_matrix, na.rm = TRUE)
-  return(dist_matrix)
-}
-
 # Calculate pairwise complete distance matrix
 dist_matrix <- pairwise_dist(data)
 
