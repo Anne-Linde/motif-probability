@@ -171,7 +171,7 @@ exp(motifProb(motifAll, hsmms)) - probTotal
 abs(exp(motifProb(motifAll, hsmms)) - probTotal) < 1e-5
 
 #############################################################
-# Check 4: Order of Pattern
+# Check 4: Order of bouts
 #############################################################
 
 # The order does not affect the probabilities (bureau / wandelen - wandelen / bureau)
