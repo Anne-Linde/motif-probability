@@ -3,7 +3,7 @@ The code in this repository corresponds to our motif probability methodology for
 
 The probability of a specific physical behavior pattern in the data can be calculated using the forward algorithm of the hidden semi-Markov model (HSMM). This algorithm requires 2 inputs:
 
-**1. User-defined motif(s)**
+1. User-defined motif(s)
 The motif probability is defined as the probability of a specific sequence of bouts, each characterized by acceleration ranges = [Amin, Amax] and their corresponding duration in minutes (L). 
 
 For example the hypothetical motif:
@@ -18,7 +18,7 @@ motif <- defineMotif(Amin = c(3, 0), Amax = c(4, 1.5), duration = 30, nEpochsMin
 
 Note that the nEpochsMin is required to determine the number of epochs corresponding to the duration and epoch length of the accelerometer data used to fit the hsmm
 
-**2. Parameters of a fitted HSMM **
+2. Parameters of a fitted HSMM
 For data reduction purposes an HSMM is fitted on the high dimensional accelerometer data using the mhsmm package.
 The parameters of this fitted HSMM (transition matrix, and state parameters (i.e., Gaussian acceleration distribution and Poisson duration distribution parameters)) then lend themselves for the calculation of this motif probability.
 
