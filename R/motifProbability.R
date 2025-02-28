@@ -1,23 +1,23 @@
-#' motifProb
+#' motifProbability
 #'
-#' @description 'motifProb' Calculates the probability of a motif within a hidden semi-Markov model (hsmm) using the forward algorithm. It requires a motif and the hsmm as inputs.
+#' @description 'motifProbability' Calculates the probability that a specific sequence of bouts (motif) occurs within the accelerometer data, based on the parameters of the fitted hidden semi-Markov model (hsmm) using the forward algorithm.
 #'
-#' @param motif A motif is defined as a sequence of activities characterized by their acceleration range and lengths. A data.frame object where the rows represent the activity, with columns Amin, Amax, and length.
+#' @param motif A motif is defined as a sequence of bouts, each characterized by their acceleration range and duration. A data.frame object where each rows represent a bout, with columns Amin, Amax, and length.
 #' @param hsmm An object containing the Hidden Semi-Markov Model (HSMM) parameters of class 'hsmm'.
 #'
-#' @return The logarithm of the probability of the entire motif within the hsmm
+#' @return The logarithm of the motif probability 
 #'
 #' @examples
 #' # Define 'motif' and 'hsmm' objects
-#' # motif <- data.frame(Amin = c(1, 2, 3), Amax = c(4, 5, 6), length = c(2, 3, 4), upper_bound = c(10, 25, 30))
+#' # motif <- defineMotif(Amin = c(1, 2, 3), Amax = c(4, 5, 6), duration = c(1, 5, 10))
 #' # hsmm <- mhsmm::hsmmfit()
 #' # Calculate motif probability
-#' # motifProb(motif, hsmm)
+#' # motifProbability(motif, hsmm)
 #'
 #' @importFrom stats pnorm
 #' @export
 
-motifProb <- function(motif, hsmm){  
+motifProbability <- function(motif, hsmm){  
   ### Define the hsmm parameters required to calculate the motif probability
   iProbs  <- hsmm$model$init           # Initial state probabilities
   Pmatrix <- hsmm$model$transition     # Transition matrix
@@ -27,20 +27,20 @@ motifProb <- function(motif, hsmm){
   
   ### Initialize forward probabilities
   nStates <- nrow(Pmatrix)
-  nEvents <- nrow(motif)
-  alpha   <- matrix(-Inf, nrow = nStates, ncol = nEvents)
+  nBouts <- nrow(motif)
+  alpha   <- matrix(-Inf, nrow = nStates, ncol = nBouts)
   
   # Initialize the first column of alpha incorporating emission and duration probabilities
-  eProb     <- emissionProb(motif[1,]$Amin, motif[1,]$Amax, Bparams)
-  dProb     <- durationProb(motif[1,]$length, shift, lambda)
+  eProb     <- accelerationProbability(motif[1,]$Amin, motif[1,]$Amax, Bparams)
+  dProb     <- durationProbability(motif[1,]$length, shift, lambda)
   alpha[,1] <- log(iProbs) + motif[1,]$length * log(eProb) + log(dProb)
   
   ### Forward algorithm recursion
-  if(nEvents > 1){ 
-    # if motif has multiple events
-    for (t in 2:nEvents) { # For each time step
-      eProb <- emissionProb(motif[t,]$Amin, motif[t,]$Amax, Bparams)
-      dProb <- durationProb(motif[t,]$length, shift, lambda)
+  if(nBouts > 1){ 
+    # if motif has multiple bouts
+    for (t in 2:nBouts) { # For each time step
+      eProb <- accelerationProbability(motif[t,]$Amin, motif[t,]$Amax, Bparams)
+      dProb <- durationProbability(motif[t,]$length, shift, lambda)
       
       for (j in 1:nStates) { # Iterate through each state of the fitted hsmm
         # Calculate the sum for transitioning from all possible states to the current state (j) at the previous time step (t-1)
@@ -55,8 +55,8 @@ motifProb <- function(motif, hsmm){
   }
   
   # Calculate the log probability of the entire motif (i.e. sum forward probabilities calculated at the last time point)
-  logMotifProb <- log(sum(exp(alpha[, nEvents])))
+  logMotifProb <- log(sum(exp(alpha[, nBouts])))
   
-  #logMotifProb <- log(sum(exp(alpha[, nEvents]), na.rm = T))
+  #logMotifProb <- log(sum(exp(alpha[, nBouts]), na.rm = T))
   return(logMotifProb)
 }
