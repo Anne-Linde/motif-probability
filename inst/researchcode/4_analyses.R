@@ -4,12 +4,9 @@ gc()
 
 ### User input required:
 dataDir <- "/Users/annelindelettink/GECKO/preprocessing/manuscript/subset/analyses"
-#load(paste0(dataDir, "/merged_data.RData"))
-
-load(paste0(dataDir, "/merged_data_rerun.RData"))
-
 #setwd("/home/wessel/Research/AnnelindeMotif/FW_ Motif probability vorderingen")
-#load("merged_data.RData")
+#load(paste0(dataDir, "/merged_data.RData"))
+load(paste0(dataDir, "/merged_data_rerun.RData"))
 
 # load packages
 library(factoextra, cluster)
@@ -20,7 +17,8 @@ library(robust)
 library(MASS)
 library(robustbase)
 library(effsize)
-
+library(xtable)
+# load functions
 rDir <- "/Users/annelindelettink/Documents/Work MacBook Pro Annelinde/My Little Moves (MLM)/Sequence mapping/Physical behavior patterns/motif-probability/R/"
 setwd(rDir)
 source("ConsensusClusterPlus.R")
@@ -73,7 +71,7 @@ X <- data[,-c(20:21)]
 
 
 ################################################################################
-# Consensus clustering of individuals
+# Consensus clustering of similar physical behavior patterns (individuals)
 ################################################################################
 # Cluster Consensus: average consensus index between all pairs of items belonging to the same cluster, for each K.
 # Item consensus: average consensus index between item i and all the (other) items in cluster cl, for all i and cl, for each K.
@@ -82,40 +80,35 @@ X <- data[,-c(20:21)]
 # Item Consensus Plot: Each stacked bar is a sample. Item-consensus values are indicated by the heights of the colored portion of the bars (using the tracking color scheme). This plot provides a view of item-consensus across all other clusters at a given k. As Wilkerman (2010) explains, with this plot it is possible to see if a sample is a very "pure" member of a cluster or if it shares high consensus to multiple clusters (large rectangles in a column of multiple colors), suggesting that it is an unstable member.
 # The Proportion of Ambiguous Clustering (PAC) is the fraction of sample pairs that hold consensus index values within a given sub-interval (x1, x2) in [0,1] (usually, x1 = 0.1 and x2 = 0.9). The CDF values correspond to the fraction of sample pairs with a consensus index values less or equal to the value 'c'. The PAC is then calculated by CDF(x2) - CDF(x1), optimal K should present a low PAC score. 
 
+cluster_kmeans <- ConsensusClusterPlus(
+  d=as.matrix(t(data)), maxK = 10, reps=1000, pItem=0.8, pFeature = 1, clusterAlg="km",title="kmeans_consensus_cluster",
+  distance="euclidean", seed = 12345, plot = "png", verbose = TRUE)
+#   dist_matrix <- pairwise_dist(data) # Calculate pairwise complete distance matrix
 # cluster_kmeans <- ConsensusClusterPlus(
-#   d=as.matrix(t(data)), maxK = 10, reps=1000, pItem=0.8, pFeature = 1, clusterAlg="km",title="kmeans_consensus_cluster",
+#   d=pairwise_dist(data), maxK = 10, reps=1000, pItem=0.8, pFeature = 1, clusterAlg="km",title="kmeans_consensus_cluster_opnieuw",
 #   distance="euclidean", seed = 12345, plot = "png", verbose = TRUE)
 
-# Calculate pairwise complete distance matrix
-dist_matrix <- pairwise_dist(data)
-
-cluster_kmeans <- ConsensusClusterPlus(
-  d=pairwise_dist(data), maxK = 10, reps=1000, pItem=0.8, pFeature = 1, clusterAlg="km",title="kmeans_consensus_cluster_opnieuw",
-  distance="euclidean", seed = 12345, plot = "png", verbose = TRUE)
-
-# save(cluster_kmeans, file = paste0(dataDir, "/kmeans_consensus_cluster/cluster_results.RData"))
-save(cluster_kmeans, file = paste0(dataDir, "/rerun/kmeans_consensus_cluster/cluster_results.RData"))
-
-#load(paste0(dataDir, "/kmeans_consensus_cluster/cluster_results.RData"))
+save(cluster_kmeans, file = paste0(dataDir, "/kmeans_consensus_cluster/cluster_results.RData"))
+load(paste0(dataDir, "/kmeans_consensus_cluster/cluster_results.RData"))
 setwd(paste0(dataDir, "/rerun"))
-icl = calcICL(cluster_kmeans,title="kmeans_consensus_cluster",plot="png",writeTable=TRUE)
 
 # Cluster analyses statistics
+icl = calcICL(cluster_kmeans,title="kmeans_consensus_cluster",plot="png",writeTable=TRUE)
 inter_cluster_consensus <- aggregate(clusterConsensus ~ k, data = icl$clusterConsensus, mean)
 intra_cluster_consensus <- aggregate(itemConsensus ~ k, data = icl$itemConsensus, mean)
 pac <- aggregate(itemConsensus ~ k, data = icl$itemConsensus, function(x) mean(x > 0.05 & x < 0.95))
 
-#Check number of clusters
+### Check optimal number of clusters
+# Perform k-means clustering
 fviz_nbclust(dist_matrix, kmeans, method = "wss") # Elbow method
 fviz_nbclust(dist_matrix, kmeans, method = "silhouette") # Silhouette method
 fviz_nbclust(dist_matrix, kmeans, method = "gap_stat") # Gap statistic
-
 # Perform hierarchical clustering
 hc <- hclust(as.dist(dist_matrix), method = "ward.D2")
 fviz_dend(hc, k = 5, rect = TRUE, show_labels = FALSE)
 # 5 clusters is optimal according most methods
 
-# Analyze clusters (descriptive statistics and differences)
+### Analyze clusters (descriptive statistics and differences)
 ################################################################################
 # Calculate the mean of each variable for each cluster
 cluster_labels <- cluster_kmeans[[5]]$consensusClass
@@ -125,16 +118,7 @@ colnames(cluster_summary) <- c("cluster", names(data))
 
 table(data$Ybg, cluster_labels) # 1 = boys, 0 = girls
 
-# # Heatmap of cluster summary (eerder gebruikte figuur) vervang door code die volgt
-# data_matrix <- as.matrix(cluster_summary[,-1])
-# rownames(data_matrix) <- cluster_summary$cluster
-# pheatmap(data_matrix, 
-#          cluster_rows = TRUE,
-#          cluster_cols = TRUE, 
-#          display_numbers = TRUE,
-#          color = colorRampPalette(c("blue", "white", "red"))(50),
-#          main = "Heatmap of motif probabilities, volume and complexity metrics per cluster")
-# Heatmap of cluster summary
+# Heatmap (Figure 6)
 data_matrix <- as.matrix(cluster_summary[,-1])
 rownames(data_matrix) <- cluster_summary$cluster
 
@@ -217,7 +201,9 @@ fviz_cluster(list(data = data_clean[,1:21], cluster = data_clean[,22]),
 
 
 # Inspect component loadings
+# Figure 4
 fviz_pca_var(pca_result, col.var = "contrib", gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"), axes = c(1,2))
+# Additional figures
 fviz_pca_var(pca_result, col.var = "contrib", gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"), axes = c(1,3))
 fviz_pca_var(pca_result, col.var = "contrib", gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"), axes = c(1,4))
 fviz_pca_var(pca_result, col.var = "contrib", gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"), axes = c(2,3))
@@ -225,16 +211,11 @@ fviz_pca_var(pca_result, col.var = "contrib", gradient.cols = c("#00AFBB", "#E7B
 fviz_pca_var(pca_result, col.var = "contrib", gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"), axes = c(3,4))
 
 # Visualize the contribution of the variables contributing to these dimensions
-fviz_contrib(pca_result, choice = "var", axes = 1) + ggtitle("Contributions to Component 1")  + theme_minimal() +   theme(axis.text.x = element_text(angle = 45, hjust = 1)) + xlab("Physical behavior estimate") # Dimension 1 (x-axis)
-fviz_contrib(pca_result, choice = "var", axes = 2)+ ggtitle("Contributions to Component 2")  + theme_minimal()+   theme(axis.text.x = element_text(angle = 45, hjust = 1)) + xlab("Physical behavior estimate")# Dimension 2 (y-axis)
-fviz_contrib(pca_result, choice = "var", axes = 3)+ ggtitle("Contributions to Component 3")  + theme_minimal()+   theme(axis.text.x = element_text(angle = 45, hjust = 1))+xlab("Physical behavior estimate")# Dimension 3
-fviz_contrib(pca_result, choice = "var", axes = 4)+ ggtitle("Contributions to Component 4")  + theme_minimal()+   theme(axis.text.x = element_text(angle = 45, hjust = 1))+xlab("Physical behavior estimate")# Dimension 4
-
-# Calculate the importance of each variable in distinguishing clusters
-importance <- cluster_summary %>% 
-  summarise(across(-cluster, ~var(.))) %>%
-  pivot_longer(cols = everything(), names_to = "Variable", values_to = "Variance") %>%
-  arrange(desc(Variance))
+# Figure 5
+fviz_contrib(pca_result, choice = "var", axes = 1) + ggtitle("")  + theme_minimal() +   theme(axis.text.x = element_text(angle = 45, hjust = 1)) + xlab("Physical behavior estimate") # Dimension 1 (x-axis)
+fviz_contrib(pca_result, choice = "var", axes = 2)+ ggtitle("")  + theme_minimal()+   theme(axis.text.x = element_text(angle = 45, hjust = 1)) + xlab("Physical behavior estimate")# Dimension 2 (y-axis)
+fviz_contrib(pca_result, choice = "var", axes = 3)+ ggtitle("")  + theme_minimal()+   theme(axis.text.x = element_text(angle = 45, hjust = 1))+xlab("Physical behavior estimate")# Dimension 3
+fviz_contrib(pca_result, choice = "var", axes = 4)+ ggtitle("")  + theme_minimal()+   theme(axis.text.x = element_text(angle = 45, hjust = 1))+xlab("Physical behavior estimate")# Dimension 4
 
 
 # Test for differences in variables between clusters using ANOVA 
@@ -262,7 +243,7 @@ summary(glm(as.factor(Ybg) ~ as.factor(cluster_labels), data = data_clusters, fa
 anova(glm(as.factor(Ybg) ~ as.factor(cluster_labels), data = data_clusters, family = "binomial"), test="Chisq")
 
 ################################################################################
-# Coherence between variables
+# Correlation between physcial behavior estimates
 ################################################################################
 # Compute correlation matrix
 Xall <- cbind(Xmot[,1:6], rnorm(nrow(Xmot), sd=0.000001), Xmot[,7:10], rnorm(nrow(Xmot), sd=0.000001), 
@@ -273,13 +254,26 @@ corMatAll <- cor(Xall, m="k", use = "pairwise.complete.obs")
 corMatAll[c(7,12,20),] <- 0
 corMatAll[,c(7,12,20)] <- 0
 
+# Figure7
 pdf("heatmap_correlationAmongMetrics.pdf")
 png("heatmap_correlationAmongMetrics.png")
-
 edgeHeat(corMatAll)
 dev.off()
 
-# Consensus clustering variables
+# Mask the upper triangle of the matrix
+corMatAll[upper.tri(corMatAll)] <- NA
+corMatAll[c(7,12,20),] <- NA
+corMatAll[,c(7,12,20)] <- NA
+
+# Convert to data frame for nicer LaTeX output
+cor_matrix_df <- as.data.frame(corMatAll)
+rownames(cor_matrix_df) <- colnames(corMatAll)
+
+xtable_obj <- xtable(cor_matrix_df, caption = "Correlation Matrix", label = "tab:lower_triangle") # Use xtable to generate LaTeX table
+print(xtable_obj, type = "latex", booktabs = TRUE, na.string = "") # Print the LaTeX code
+
+
+# Consensus clustering of physical behavior estimates
 
 dist_matrix_vars <- pairwise_dist(t(data[,1:19]))
 
@@ -289,9 +283,9 @@ dist_matrix_vars <- pairwise_dist(t(data[,1:19]))
  save(cluster_vars, file = paste0(dataDir, "rerun/consensus_clustering_vars/cluster_results.RData"))
 
 load(paste0(dataDir, "/consensus_clustering_vars/cluster_results.RData"))
-icl_var = calcICL(cluster_vars,title="consensus_clustering_vars",plot="png",writeTable=TRUE)
 
 # Cluster analyses statistics
+icl_var = calcICL(cluster_vars,title="consensus_clustering_vars",plot="png",writeTable=TRUE)
 inter_cluster_consensus_var <- aggregate(clusterConsensus ~ k, data = icl_var$clusterConsensus, mean)
 intra_cluster_consensus_var <- aggregate(itemConsensus ~ k, data = icl_var$itemConsensus, mean)
 pac_var <- aggregate(itemConsensus ~ k, data = icl_var$itemConsensus, function(x) mean(x > 0.05 & x < 0.95))
@@ -312,20 +306,12 @@ fviz_dend(hc, k = 6, rect = TRUE, show_labels = FALSE)
 cluster_labels_vars <- cluster_vars[[6]]$consensusClass
 
 ################################################################################
-# regression analysis of boys vs girls
+# regression analysis of sex (boys vs girls)
 ################################################################################
 
 pseudo_r_squared <- function(model) {
   1 - sum(resid(model)^2, na.rm = TRUE) / sum((model$model[,1] - mean(model$model[,1], na.rm = TRUE))^2, na.rm = TRUE)
 }
-
-# # logistic regression of sex, one covariate at the time
-# glmRes <- numeric()
-# for (u in 1:ncol(X)){
-#   glmRes <- rbind(glmRes, c(cor(Ybg, X[,u], m="k"), coef(summary(glmRob(Ybg ~ X[,u], family="binomial")))[2,c(1,4)]))
-# }
-# colnames(glmRes)[1] <- c("cor(B/G,Covariate)")
-# rownames(glmRes) <- names(X)
 
 glmRes_sex <- numeric()
 for (u in 1:ncol(X)){
@@ -344,7 +330,11 @@ for (u in 1:ncol(X)){
 colnames(glmRes_sex) <- c("cor(B/G,Covariate)", "Estimate", "p-value", "r_squared", "AIC", "BIC", "MSE")
 rownames(glmRes_sex) <- names(X)
 
+# Convert the data frame to an xtable object
+table_sex <- xtable(glmRes_sex, caption = "Simple linear regression results with sex as dependent variable", label = "tab:regression_sex")
+print(table_sex, type = "latex") # Print the xtable object as LaTeX code
 
+# Figure 8
 # diagnostic of logistic regression (single probs in model)
 nBins <- 9
 ps <- matrix(NA, nBins+1, ncol(X))
@@ -365,9 +355,8 @@ rownames(psMod) <- c("0-10th percentile", "10-20th percentile", "20-30th percent
                      "60-70th percentile", "70-80th percentile", "80-90th percentile", 
                      "90-100th percentile")
 pdf("heatmap_binBGratio2variable.png")
-edgeHeat(as.matrix(psMod))
+edgeHeat(as.matrix(psMod)*-1)
 dev.off()
-
 
 # # Fit the robust linear models
 df_Xvolcomp <- cbind(Xvol, Xcom, Ybg)
@@ -385,7 +374,6 @@ lrt_stat <- -2 * (logLik_value_baseline - logLik_value_full)
 df <- length(coef(full_model)) - length(coef(baseline_model))
 p_value <- pchisq(lrt_stat, df, lower.tail = FALSE)
 
-
 aic_value_baseline <- 2 * length(coef(baseline_model)) - 2 * logLik_value_baseline
 aic_value_full <- 2 * length(coef(full_model)) - 2 * logLik_value_full
 
@@ -395,28 +383,10 @@ bic_value_full <- log(length(full_model$y)) * length(coef(full_model)) - 2 * log
 r_squared_baseline <- pseudo_r_squared(baseline_model)
 r_squared_full <- pseudo_r_squared(full_model)
 
-
 # Deviance comparison
 deviance_diff <-model_VolComp$deviance - model_VolCompMotifs$deviance
 df_diff <- length(coef(model_VolCompMotifs)) - length(coef(model_VolComp))
 p_value <- pchisq(deviance_diff, df = df_diff, lower.tail = FALSE)
-
-# model_VolCompMotifs <- lmRob(Yzbmi ~ ., data = df_Xvolcompmotifs_clean)
-# 
-# # Get the summary of the model
-# summary_model_vol <- summary(model_Vol)
-# summary_model_volcomp <- summary(model_VolComp)
-# summary_model_volcompmotifs <- summary(model_VolCompMotifs)
-# 
-# #Added value
-# 
-# # Extract estimates and p-values
-# estimates <- summary_model_vol$coefficients[, "Value"]
-# p_values <- 2 * pt(-abs(summary_model$coefficients[, "t value"]), summary_model$df[2])
-# 
-# # Print estimates and p-values
-# print(estimates)
-# print(p_values)
 
 ################################################################################
 # regression analysis of BMI z-score
@@ -439,50 +409,7 @@ for (u in 1:ncol(X)){
 colnames(glmRes_zbmi) <- c("cor(zbmi,Covariate)", "Estimate", "p-value", "r_squared", "AIC", "BIC", "MSE")
 rownames(glmRes_zbmi) <- names(X)
 
-# # Add Yzbmi to the DataFrame
-# df_Xvol <- cbind(Xvol, Yzbmi)
-# df_Xvolcomp <- cbind(Xvol, Xcom, Yzbmi)
-# df_Xvolcompmotifs <- cbind(Xvol, Xcom, Xmot, Yzbmi)
-# df_Xvol_clean <- na.omit(df_Xvol)
-# df_Xvolcomp_clean <- na.omit(df_Xvolcomp)
-# df_Xvolcompmotifs_clean <- na.omit(df_Xvolcompmotifs)
-# colnames(df_Xvolcompmotifs_clean) <- c(names(Xvol), names(Xcom), motifs, "Yzbmi")
-# 
-# # Fit the robust linear models
-# model_Vol <- lmRob(Yzbmi ~ ., data = Xvol_clean)
-# model_VolComp <- lmRob(Yzbmi ~ ., data = df_Xvolcomp_clean)
-# model_VolCompMotifs <- lmRob(Yzbmi ~ ., data = df_Xvolcompmotifs_clean)
-# 
-# # Get the summary of the model
-# summary_model_vol <- summary(model_Vol)
-# summary_model_volcomp <- summary(model_VolComp)
-# summary_model_volcompmotifs <- summary(model_VolCompMotifs)
-# 
-# #Added value
-# 
-# # Extract estimates and p-values
-# estimates <- summary_model_vol$coefficients[, "Value"]
-# p_values <- 2 * pt(-abs(summary_model$coefficients[, "t value"]), summary_model$df[2])
-# 
-# # Print estimates and p-values
-# print(estimates)
-# print(p_values)
-# 
-# # Add Yzbmi to the DataFrame
-# dataframe <- cbind(Xvol, Xcom, Yzbmi)
-# 
-# # Fit the extended linear model using rlm from the MASS package
-# dataframe_ext <- cbind(Xvol, Xcom, Xmot, Yzbmi)
-# dataframe_ext_clean <- na.omit(dataframe_ext) # Handle NA values by dropping rows with NA values
-# names(dataframe_ext_clean) <- c(names(Xvol), names(Xcom), motifs, "Yzbmi")
-# 
-# model_ext <- rlm(Yzbmi ~ ., data = dataframe_ext_clean)
-# 
-# # Get the summary of the model
-# summary_model <- summary(model_ext)
-# 
-# # Extract estimates and p-values
-# estimates <- summary_model$coefficients[, "Value"]
-# p_values <- 2 * pt(-abs(summary_model$coefficients[, "t value"]), summary_model$df[2])
-
+# Convert the data frame to an xtable object
+table_bmi <- xtable(glmRes_zbmi, caption = "Simple linear regression results with BMI z-score as dependent variable", label = "tab:regression_bmi")
+print(table_bmi, type = "latex") # Print the xtable object as LaTeX code
 
