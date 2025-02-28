@@ -12,11 +12,11 @@ Authors@R: c(person(given = "Annelinde",
                     role=c("aut"),
                     email="w.vanwieringen@amsterdamumc.nl"))
 Maintainer: Annelinde Lettink <a.lettink@amsterdamumc.nl>
-Description: For evaluating the probability of sequences of activities (characterised by acceleration ranges and their lengths) using a forward algorithm of the hidden semi-Markov model.
+Description: For evaluating the probability of sequences of bouts (each characterised by acceleration ranges and their lengths) using a forward algorithm of the hidden semi-Markov model.
 URL: https://github.com/Anne-Linde/motif-probability
 License: Apache License version 2.0 | file LICENSE
 Imports: pnorm
-Depends: R (>= 3.5.0)
+Depends: stats, R (>= 3.5.0)
 NeedsCompilation: no
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.2.3
