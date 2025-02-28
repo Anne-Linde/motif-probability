@@ -289,6 +289,7 @@ boutDurations <- c(30, 10, 5) # Note that the duration of the first bout has to 
 variable_name <- "HFENplus" #metric for training hsmm
 
 # Load functions required for hsmm
+# Note that these functions are also moved to the researchcode folder
 r_files <- list.files(path = "//vumc.nl/afd$/DIV10/POH/Sectie_2/2016_SB and PA pattern analysis/Team Annelinde/Physcial behavior patterns/Physical behavior patterns/R"
                       , pattern = [file://.R$]\\.R$, full.names = TRUE)
 lapply(r_files, source)
