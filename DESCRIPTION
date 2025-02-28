@@ -2,7 +2,7 @@ Package: motif-probability
 Type: Package
 Title: Motif probability
 Version: 0.0-1
-Date: 2024-01-09
+Date: 2025-02-28
 Authors@R: c(person(given = "Annelinde",
                     family = "Lettink",
                     role = c("aut","cre"),
