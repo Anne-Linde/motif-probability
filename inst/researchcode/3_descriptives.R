@@ -1,5 +1,11 @@
-hsmmDir <- "/Users/annelindelettink/GECKO/preprocessing/manuscript/subset/output_rawinput_5years_complete_anthro/epochdata/validdata/mhsmmdata/models"
-load(paste0("/Users/annelindelettink/GECKO/preprocessing/manuscript/subset/analyses", "/merged_data_rerun.RData"))
+### This script was used to calculate the descriptive statistics corresponding to the following article:
+## Unveiling hidden temporal physical behavior patterns: 
+# A forward algorithm of the hidden semi-Markov model to capture motif probabilty beyond total volume and complexity
+## Annelinde Lettink, Mai JM Chin A Paw, Eva Corpeleijn, Teatske M Altenburg, & Wessel N van Wieringen
+
+# User input:
+hsmmDir <- "/Users/annelindelettink/GECKO/preprocessing/manuscript/subset/output_rawinput_5years_complete_anthro/epochdata/validdata/mhsmmdata/models" # Contains the fitted HSMMs (obtained by running script: 1_preprocess_segment_accelerometer_data.R)
+load(paste0("/Users/annelindelettink/GECKO/preprocessing/manuscript/subset/analyses", "/merged_data.RData")) # Load the data file (obtained by running script: 2_motif_probability_create_dataset.R)
 
 ## Calculate descriptive statistics
 merged_data$zbmi <- as.numeric(merged_data$zbmi)
@@ -8,7 +14,6 @@ merged_data$measure_age <- as.numeric(merged_data$measure_age)
 funs <- list(sd=sd, mean=mean)
 descriptives <- as.data.frame(sapply(funs, function(x) sapply(merged_data, x, na.rm=T)))
 table(merged_data$sex) # 1 = boys, 0 = girls
-
 
 # Calculate average state means, sd, and durations
 files <- list.files(hsmmDir)
@@ -44,6 +49,8 @@ for(file in 1:length(files)){
 state_df <- as.data.frame(cbind(means_state1, vars_state1, means_state2, vars_state2, means_state3, vars_state3,
                   lambda_state1, lambda_state2, lambda_state3))
 summary(state_df)
+
+
 ## Figure 1: graph (rest of the figure was created in Canva)
 # Plot and save images final hsmm and the state sojourn
 library(lubridate)
@@ -99,9 +106,9 @@ g <- ggplot() +
   scale_y_continuous(name = "Acceleration") +
   xlab("Time (hh:mm)")
 
-
-
-
+png("/Users/annelindelettink/GECKO/preprocessing/manuscript/subset/analyses/segmented_accerlerometer_data.png", width = 170, height = 100, units = "mm", res = 300)
+g
+dev.off()
 
 
 # Define the states' mu (mean) and sigma (variance)
@@ -113,6 +120,7 @@ x_vals <- seq(min(mu - 3*sigma_sd), max(mu + 3*sigma_sd), length.out = 100)
 
 # Plot the Gaussian distributions for each state
 library(ggplot2)
+png("/Users/annelindelettink/GECKO/preprocessing/manuscript/subset/analyses/hsmm_acceleration_distributions.png", width = 170, height = 100, units = "mm", res = 300)
 
 plot_data <- data.frame(x = rep(x_vals, 3),
                         y = c(dnorm(x_vals, mean = mu[1], sd = sigma_sd[1]),
@@ -130,10 +138,13 @@ ggplot(plot_data, aes(x = x, y = y, color = factor(State))) +
        color = "State") +
   theme_minimal()
 
+dev.off()
 
 
 # Example: Poisson durations modeled by exponential distributions
 # lambda is the rate parameter, i.e., the expected number of events per unit time.
+
+png("/Users/annelindelettink/GECKO/preprocessing/manuscript/subset/analyses/hsmm_duration_distributions.png", width = 170, height = 100, units = "mm", res = 300)
 
 # Define lambda for each state
 lambda <-  hsmms$model$sojourn$lambda + 1
@@ -160,3 +171,4 @@ ggplot(plot_data, aes(x = x, y = y, color = factor(State))) +
        color = "State") +
   theme_minimal()
 
+dev.off()
