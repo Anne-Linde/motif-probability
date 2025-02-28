@@ -19,19 +19,19 @@ accelerationProbability <- function(lower, upper, params){
   sd = sqrt(params$sigma)   # Calculate the standard deviation (because params$sigma is variance)
   
   if (lower > 0 & is.finite(upper)){
-    return(stats::pnorm(upper, mean=params$mu, sd=sd) - 
-             stats::pnorm(lower, mean=params$mu, sd=sd))
+    return(pnorm(upper, mean=params$mu, sd=sd) - 
+             pnorm(lower, mean=params$mu, sd=sd))
   } 
   if (lower == 0 & is.finite(upper)){
-    return(stats::pnorm(upper, mean=params$mu, sd=sd) -
-             stats::pnorm(-Inf,  mean=params$mu, sd=sd))
+    return(pnorm(upper, mean=params$mu, sd=sd) -
+             pnorm(-Inf,  mean=params$mu, sd=sd))
   }	
   if (lower > 0 & !is.finite(upper)){
-    return(stats::pnorm(Inf,   mean=params$mu, sd=sd) - 
-             stats::pnorm(lower, mean=params$mu, sd=sd))
+    return(pnorm(Inf,   mean=params$mu, sd=sd) - 
+             pnorm(lower, mean=params$mu, sd=sd))
   }		
   if (lower == 0 & !is.finite(upper)){
-    return(stats::pnorm( Inf, mean=params$mu, sd=sd) - 
-             stats::pnorm(-Inf, mean=params$mu, sd=sd))
+    return(pnorm( Inf, mean=params$mu, sd=sd) - 
+             pnorm(-Inf, mean=params$mu, sd=sd))
   }			
 }
