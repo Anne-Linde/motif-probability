@@ -1,33 +1,31 @@
-# Tabula rasa
-rm(list=ls())
-gc()
+### This script was used to create the data set corresponding to the following article:
+## Unveiling hidden temporal physical behavior patterns: 
+# A forward algorithm of the hidden semi-Markov model to capture motif probabilty beyond total volume and complexity
+## Annelinde Lettink, Mai JM Chin A Paw, Eva Corpeleijn, Teatske M Altenburg, & Wessel N van Wieringen
 
 # Load required libraries
 library(haven)
 library(dplyr)
 library(TSEntropies)
 
+devtools::source_url("https://raw.githubusercontent.com/Anne-Linde/motif-probability/refs/heads/test_functions/R/ConsensusClusterPlus.R")
+
 # Load package functions
 ## TO DO: install package!
 rDir <- "/Users/annelindelettink/Documents/Work MacBook Pro Annelinde/My Little Moves (MLM)/Sequence mapping/Physical behavior patterns/motif-probability/R/"
 setwd(rDir)
-source("durationProb.R")
-source("emissionProb.R")
-source("motifProb.R")
-source("createMotif.R")
+source("durationProbability.R")
+source("accelerationProbability.R")
+source("motifProbability.R")
+source("defineMotif.R")
 source("calculateMotifProbabilities.R")
-source("lempel_ziv_complexity.R")
+source("/Users/annelindelettink/Documents/Work MacBook Pro Annelinde/My Little Moves (MLM)/Sequence mapping/Physical behavior patterns/motif-probability/inst/researchcode/lempel_ziv_complexity.R")
 
 ### User input required:
-dataDir <- "/Users/annelindelettink/GECKO/preprocessing/manuscript/subset/output_rawinput_5years_complete_anthro/epochdata/validdata/mhsmmdata/models"
-#dataDir <- "/Users/annelindelettink/Documents/Work MacBook Pro Annelinde/My Little Moves (MLM)/Sequence mapping/Physical behavior patterns/sequences_old/all"
-#modelDir <- paste0(dataDir, "/trained_models/")
-#accelerationSequenceDir <- paste0(dataDir, "/segmented_data/")
+hsmmDir <- "/Users/annelindelettink/GECKO/preprocessing/manuscript/subset/output_rawinput_5years_complete_anthro/epochdata/validdata/mhsmmdata/models" # Contains the fitted HSMMs (obtained by running script: 1_preprocess_segment_accelerometer_data.R)
 
-#Load antrophometric data and GGIR day summary
-spss <- read_sav("/Users/annelindelettink/GECKO/preprocessing/manuscript/subset/complete_spss_GECKO_5years.sav")
-ggir <- read.csv("/Users/annelindelettink/GECKO/preprocessing/manuscript/subset/output_rawinput_5years_complete_anthro/results/part2_summary.csv")
-#ggir <- read.csv("/Users/annelindelettink/GECKO/preprocessing/manuscript/subset/output_rawinput_5years_complete_anthro/results/part2_summary.csv")
+#Load anthropometric data and GGIR day summary
+spss <- read_sav("/Users/annelindelettink/GECKO/preprocessing/manuscript/subset/complete_spss_GECKO_5years.sav") 
 ggir <- read.csv("/Users/annelindelettink/GECKO/preprocessing/manuscript/subset/output_rawinput_5years_complete_anthro/results/rerun/part2_summary.csv")
 ggir2 <- read.csv("/Users/annelindelettink/GECKO/preprocessing/manuscript/subset/output_rawinput_5years_complete_anthro/results/rerun/part5_personsummary_WW_L398M890V1254_T5A5.csv")
 
@@ -46,21 +44,24 @@ epoch_length <- 15 # hsmms were trained based on 15-sec epochs
 n_epochs_min <- 60 / epoch_length
 
 # Define motifs
+motif.PA_30min <- defineMotif(Amin.PA, Amax.PA, 30, n_epochs_min) 
+motif.PA_15min <- defineMotif(Amin.PA, Amax.PA, 15, n_epochs_min)
+motif.PA_10min <- defineMotif(Amin.PA, Amax.PA, 10, n_epochs_min)
+motif.PA_7min <- defineMotif(Amin.PA, Amax.PA, 7, n_epochs_min)
+motif.PA_5min <- defineMotif(Amin.PA, Amax.PA, 5, n_epochs_min)
+motif.PA_1min <- defineMotif(Amin.PA, Amax.PA, 1, n_epochs_min)
+motif.SB_5min <- defineMotif(Amin.SB, Amax.SB, 5, n_epochs_min)
+motif.SB_10min <- defineMotif(Amin.SB, Amax.SB, 10, n_epochs_min)
+motif.SB_30min <- defineMotif(Amin.SB, Amax.SB, 30, n_epochs_min)
+motif.SB_60min <- defineMotif(Amin.SB, Amax.SB, 60, n_epochs_min)
 motifs <- c( "motif.PA_30min",  "motif.PA_15min", "motif.PA_10min", "motif.PA_7min", "motif.PA_5min", "motif.PA_1min", "motif.SB_5min", "motif.SB_10min", "motif.SB_30min", "motif.SB_60min")
-motif.PA_30min <- createMotif(Amin.PA, Amax.PA, 30, n_epochs_min)
-motif.PA_15min <- createMotif(Amin.PA, Amax.PA, 15, n_epochs_min)
-motif.PA_10min <- createMotif(Amin.PA, Amax.PA, 10, n_epochs_min)
-motif.PA_7min <- createMotif(Amin.PA, Amax.PA, 7, n_epochs_min)
-motif.PA_5min <- createMotif(Amin.PA, Amax.PA, 5, n_epochs_min)
-motif.PA_1min <- createMotif(Amin.PA, Amax.PA, 1, n_epochs_min)
-motif.SB_5min <- createMotif(Amin.SB, Amax.SB, 5, n_epochs_min)
-motif.SB_10min <- createMotif(Amin.SB, Amax.SB, 10, n_epochs_min)
-motif.SB_30min <- createMotif(Amin.SB, Amax.SB, 30, n_epochs_min)
-motif.SB_60min <- createMotif(Amin.SB, Amax.SB, 60, n_epochs_min)
 
 ######################
 # Calculate the probabilties for all individuals: 
-probabilities <- calculateMotifProbabilities(motifs, dataDir)
+probabilities <- calculateMotifProbabilities(motifs, hsmmDir)
+for(pp in 1:nrow(probabilities)){
+  probabilities$id[pp] <- strsplit(probabilities$id[pp], "_")[[1]][1] # Extract participant ID
+}
 colnames(probabilities)[colnames(probabilities) == "id"] <- "GKNO"
 
 #### Select anthropometrics
@@ -88,10 +89,8 @@ ggir <- ggir[matching_rows,]
 selected_acc_data <- ggir %>%
   select(
     AD_mean_HFENplus_mg_0.24hr, # average daily acceleration
-    AD_L5_HFENplus_mg_0.24hr,   # average acceleration value during least active 5 hours
-    #AD_M5_HFENplus_mg_0.24hr,   # average acceleration value during most active 5 hours
+    #AD_L5_HFENplus_mg_0.24hr,   # average acceleration value during least active 5 hours
     AD_mean_NeishabouriCount_vm_mg_0.24hr, # average daily VM count
-    #AD_MVPA_E15S_T890_HFENplus_0.24hr,  # Time spent in moderate-to-vigorous based on 15 second epoch size and an HFENplus metric
     AD_MVPA_E15S_T890_NeishabouriCount_y_0.24hr  # Time spent in moderate-to-vigorous based on 15 second epoch size and Sirard cut-point
   )
 merged_data <- cbind(merged_data, selected_acc_data)
@@ -125,9 +124,9 @@ merged_data$MVPA <- merged_data$dur_day_total_MOD_min_pla + merged_data$dur_day_
 lz <- c()
 sampleEntropy <- c()
 
-filelist <- list.files(dataDir)
+filelist <- list.files(hsmmDir)
 for(pp in 1:length(filelist)){
-  load(paste0(dataDir, "/", filelist[pp]))# Load the sequences
+  load(paste0(hsmmDir, "/", filelist[pp]))# Load the sequences
   lz <- c(lz, lempel_ziv_complexity(hsmms$yhat))
   sampleEntropy <- c(sampleEntropy, TSEntropies::SampEn(hsmms$yhat))
 }
