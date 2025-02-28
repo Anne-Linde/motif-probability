@@ -1,12 +1,11 @@
-# Tabula rasa
-rm(list=ls())
-gc()
+### This script was used to perform the statistical analyses corresponding to the following article:
+## Unveiling hidden temporal physical behavior patterns: 
+# A forward algorithm of the hidden semi-Markov model to capture motif probabilty beyond total volume and complexity
+## Annelinde Lettink, Mai JM Chin A Paw, Eva Corpeleijn, Teatske M Altenburg, & Wessel N van Wieringen
 
-### User input required:
+### User input:
 dataDir <- "/Users/annelindelettink/GECKO/preprocessing/manuscript/subset/analyses"
-#setwd("/home/wessel/Research/AnnelindeMotif/FW_ Motif probability vorderingen")
-#load(paste0(dataDir, "/merged_data.RData"))
-load(paste0(dataDir, "/merged_data_rerun.RData"))
+load(paste0(dataDir, "/merged_data.RData")) # Load the data file (obtained by running script: 2_motif_probability_create_dataset.R)
 
 # load packages
 library(factoextra, cluster)
@@ -18,14 +17,10 @@ library(MASS)
 library(robustbase)
 library(effsize)
 library(xtable)
-# load functions
-rDir <- "/Users/annelindelettink/Documents/Work MacBook Pro Annelinde/My Little Moves (MLM)/Sequence mapping/Physical behavior patterns/motif-probability/R/"
-setwd(rDir)
-source("ConsensusClusterPlus.R")
-setwd(dataDir)
+library(devtools)
 
 ################################################################################
-# structure data
+# Structure data
 #################################################################################
 # Probabilities
 pBGt <- merged_data[,2:11]
@@ -35,110 +30,101 @@ for (u in 1:ncol(pBGt)){
 }
 pBG <- t(pBG)
 pBG <- -log(-log(pBG + sort(unique(as.numeric(pBG)))[2]))
-# Restructure variables PA 1 min - PA 30 min -- SB 5 min - SB 60 min
+# Re-order motif probabilities: PA 1 min - PA 30 min -- SB 5 min - SB 60 min
 pBG <- pBG[, c(6:1, 7:10)] 
 motifs <- c("motif.PA_1min", "motif.PA_5min", "motif.PA_7min", "motif.PA_10min", "motif.PA_15min",  "motif.PA_30min", "motif.SB_5min", "motif.SB_10min", "motif.SB_30min", "motif.SB_60min")
 
-Xmot <- pBG # Motif probabilities
-Xvol <- merged_data[, c("avg_acc_mg", "avg_acc_VMcts", "M30", "M60", "SB", "LPA", "MVPA")] # Volume metrics
+Xmot <- pBG
 
-#Xvol <- merged_data[, c("avg_acc_mg", "avg_acc_VMcts", "L5", "M30", "M60", "SB", "LPA", "MVPA")] # Volume metrics
-#Xvol <- merged_data[, c("mean_HFEN+", "L5_HFEN+", "M5_HFEN+", "mean_NeishabouriCount_VM", "MVPA_T890_NeishabouriCount_y")] # Volume metrics
-Xcom <- merged_data[, c("sample_entropy", "lempel_ziv")] # Complexity scores
+# Volume-based estimates
+Xvol <- merged_data[, c("avg_acc_mg", "avg_acc_VMcts", "M30", "M60", "SB", "LPA", "MVPA")]
+# Complexity metrics
+Xcom <- merged_data[, c("sample_entropy", "lempel_ziv")]
 
+## Standardize covariates
 # Centering around mean
 Xmot <- sweep(Xmot, 2, FUN="-", apply(Xmot, 2, mean))
 Xvol <- sweep(Xvol, 2, FUN = "-", apply(Xvol, 2, mean, na.rm = TRUE))
-#Xvol <- sweep(Xvol, 2, FUN="-", apply(Xvol, 2, mean))
 Xcom <- sweep(Xcom, 2, FUN="-", apply(Xcom, 2, mean))
-
 # Standardized covariate information, per category: motif prob, volume, complexity
 Xmot <- sweep(Xmot, 2, FUN="/", apply(Xmot,  2, mad))
-#Xvol <- sweep(Xvol, 2, FUN="/", apply(Xvol, 2, mad))
 Xvol <- sweep(Xvol, 2, FUN="/", apply(Xvol, 2, mad, na.rm = TRUE))
 Xcom <- sweep(Xcom, 2, FUN="/", apply(Xcom, 2, mad))
 
-# Response type: boys2girls & zbmi, added 
+# Response variables: sex (boys2girls) & BMI z-score 
 Ybg   <- 1*(merged_data$sex == "1") # 1 = boy, 0 = girl
 Yzbmi <- as.numeric(merged_data$zbmi)
 
+## Combine data
 data <- cbind(Xmot, Xvol, Xcom, Yzbmi, Ybg)
-#colnames(data) <- c(motifs, names(data)[11:19])
 colnames(data) <- c(motifs, names(data)[11:21])
 
-#X <- data[,-c(18:19)]
 X <- data[,-c(20:21)]
-
 
 ################################################################################
 # Consensus clustering of similar physical behavior patterns (individuals)
 ################################################################################
-# Cluster Consensus: average consensus index between all pairs of items belonging to the same cluster, for each K.
-# Item consensus: average consensus index between item i and all the (other) items in cluster cl, for all i and cl, for each K.
-# Intra- and Inter- Cluster consensus: intra consensus statistic (the mean of all cluster consensus for each K) and inter consensus statistic (mean of all item consensus between an item and all clusters to which the item does not belong, for each K).
-# Cluster Consensus Plot: This plot highlights the mean pairwise consensus values between a cluster's members for each k. The color scheme follows all previous graphs and sample are stacked bars grouped by K value on the horizontal x-axis. High values show that the clusters hold high stability and likewise low values highlights a clusters instability. 
-# Item Consensus Plot: Each stacked bar is a sample. Item-consensus values are indicated by the heights of the colored portion of the bars (using the tracking color scheme). This plot provides a view of item-consensus across all other clusters at a given k. As Wilkerman (2010) explains, with this plot it is possible to see if a sample is a very "pure" member of a cluster or if it shares high consensus to multiple clusters (large rectangles in a column of multiple colors), suggesting that it is an unstable member.
-# The Proportion of Ambiguous Clustering (PAC) is the fraction of sample pairs that hold consensus index values within a given sub-interval (x1, x2) in [0,1] (usually, x1 = 0.1 and x2 = 0.9). The CDF values correspond to the fraction of sample pairs with a consensus index values less or equal to the value 'c'. The PAC is then calculated by CDF(x2) - CDF(x1), optimal K should present a low PAC score. 
+devtools::source_url("https://raw.githubusercontent.com/Anne-Linde/motif-probability/refs/heads/test_functions/R/ConsensusClusterPlus.R")
+if(!dir.exists(paste0(dataDir, "/consensus_clustering_individuals"))){
+  dir.create(paste0(dataDir, "/consensus_clustering_individuals"))
+}
+dist_matrix <- pairwise_dist(t(data))
+if(!file.exists(paste0(dataDir, "/consensus_clustering_individuals/cluster_results.RData"))){ # only run if not performed before as it is computationally expensive
 
-cluster_kmeans <- ConsensusClusterPlus(
-  d=as.matrix(t(data)), maxK = 10, reps=1000, pItem=0.8, pFeature = 1, clusterAlg="km",title="kmeans_consensus_cluster",
-  distance="euclidean", seed = 12345, plot = "png", verbose = TRUE)
-#   dist_matrix <- pairwise_dist(data) # Calculate pairwise complete distance matrix
-# cluster_kmeans <- ConsensusClusterPlus(
-#   d=pairwise_dist(data), maxK = 10, reps=1000, pItem=0.8, pFeature = 1, clusterAlg="km",title="kmeans_consensus_cluster_opnieuw",
-#   distance="euclidean", seed = 12345, plot = "png", verbose = TRUE)
-
-save(cluster_kmeans, file = paste0(dataDir, "/kmeans_consensus_cluster/cluster_results.RData"))
-load(paste0(dataDir, "/kmeans_consensus_cluster/cluster_results.RData"))
-setwd(paste0(dataDir, "/rerun"))
+    cluster_kmeans <- ConsensusClusterPlus(
+    d=dist_matrix, maxK = 10, reps=1000, pItem=0.8, pFeature = 1, clusterAlg="km",title="consensus_clustering_individuals",
+    distance="euclidean", seed = 12345, plot = "png", verbose = TRUE)
+  save(cluster_kmeans, file = paste0(dataDir, "/consensus_clustering_individuals/cluster_results.RData"))
+} else{
+  load(paste0(dataDir, "/consensus_clustering_individuals/cluster_results.RData"))
+}
 
 # Cluster analyses statistics
-icl = calcICL(cluster_kmeans,title="kmeans_consensus_cluster",plot="png",writeTable=TRUE)
+icl = calcICL(cluster_kmeans,title="consensus_clustering_individuals",plot="png",writeTable=TRUE)
 inter_cluster_consensus <- aggregate(clusterConsensus ~ k, data = icl$clusterConsensus, mean)
 intra_cluster_consensus <- aggregate(itemConsensus ~ k, data = icl$itemConsensus, mean)
 pac <- aggregate(itemConsensus ~ k, data = icl$itemConsensus, function(x) mean(x > 0.05 & x < 0.95))
 
 ### Check optimal number of clusters
 # Perform k-means clustering
+png(paste0(dataDir, "/consensus_clustering_individuals/kmeans_Elbow.png"), width = 170, height = 170, units = "mm", res = 300)
 fviz_nbclust(dist_matrix, kmeans, method = "wss") # Elbow method
+dev.off()
+png(paste0(dataDir, "/consensus_clustering_individuals/kmeans_Silhouette.png"), width = 170, height = 170, units = "mm", res = 300)
 fviz_nbclust(dist_matrix, kmeans, method = "silhouette") # Silhouette method
+dev.off()
+png(paste0(dataDir, "/consensus_clustering_individuals/kmeans_Gap.png"), width = 170, height = 170, units = "mm", res = 300)
 fviz_nbclust(dist_matrix, kmeans, method = "gap_stat") # Gap statistic
+dev.off()
 # Perform hierarchical clustering
 hc <- hclust(as.dist(dist_matrix), method = "ward.D2")
-fviz_dend(hc, k = 5, rect = TRUE, show_labels = FALSE)
-# 5 clusters is optimal according most methods
+png(paste0(dataDir, "/consensus_clustering_individuals/hierarchical_dendrogram.png"), width = 170, height = 170, units = "mm", res = 300)
+fviz_dend(hc, k = 5, rect = TRUE, show_labels = FALSE) + guides(color = "none", fill = "none")
+dev.off()
 
-### Analyze clusters (descriptive statistics and differences)
-################################################################################
-# Calculate the mean of each variable for each cluster
+# 5 clusters is optimal according most methods - Assign cluster labels for 5 clusters
 cluster_labels <- cluster_kmeans[[5]]$consensusClass
 data_clusters <- cbind(data, cluster_labels)
-cluster_summary <- aggregate(data_clusters, by = list(cluster_labels), function(x) mean(x, na.rm = TRUE))
-colnames(cluster_summary) <- c("cluster", names(data))
 
-table(data$Ybg, cluster_labels) # 1 = boys, 0 = girls
-
-# Heatmap (Figure 6)
-data_matrix <- as.matrix(cluster_summary[,-1])
-rownames(data_matrix) <- cluster_summary$cluster
-
-x <- rep(0, 5)
-y <- rep(0, 5)
-z <- rep(0, 5)
-xy <- rep(0, 5)
-matrix <- cbind(as.matrix(cluster_summary[,2:7]), x, as.matrix(cluster_summary[,8:11]), y, 
-                as.matrix(cluster_summary[,12:18]), z, as.matrix(cluster_summary[,19:20]), xy, as.matrix(cluster_summary[,21:22]))
-colnames(matrix)[c(7,12,20, 23)] <- c("", " ", "  ", "   ") # Remove labels for x, y, z, xy
-edgeHeat(t(matrix)) + theme_minimal()
-
-## PCA clusters
+### Principal Components Analysis (PCA)
+################################################################################
+if(!dir.exists(paste0(dataDir, "/consensus_clustering_individuals/PCA"))){
+  dir.create(paste0(dataDir, "/consensus_clustering_individuals/PCA"))
+}
 data_clean <- na.omit(data_clusters)
 
+# Perform PCA
 pca_result <- prcomp(data_clean[,1:21], scale. = TRUE)
 summary(pca_result)
-screeplot(pca_result, col = "blue", type = "lines") 
-# 4 main components
 
+# Plot eigenvalues of the components -- 4 components
+png(paste0(dataDir, "/consensus_clustering_individuals/PCA/Eigenvalues_components.png"), width = 170, height = 170, units = "mm", res = 300)
+screeplot(pca_result, col = "blue", type = "lines", main = "") 
+dev.off()
+
+# Plot Cluster components
+png(paste0(dataDir, "/consensus_clustering_individuals/PCA/clusters_components12.png"), width = 170, height = 170, units = "mm", res = 300)
+png(paste0(dataDir, "/consensus_clustering_individuals/PCA/Figure4.png"), width = 170, height = 170, units = "mm", res = 300)
 fviz_cluster(list(data = data_clean[,1:21], cluster = data_clean[,22]), 
              geom = "point", 
              ellipse.type = "convex", 
@@ -148,7 +134,9 @@ fviz_cluster(list(data = data_clean[,1:21], cluster = data_clean[,22]),
              ylab = paste("Component 2 (", round(summary(pca_result)$importance[2, 2] * 100, 1), "%)", sep = "")) + 
   ggtitle("") + 
   theme_minimal()
+dev.off()
 
+png(paste0(dataDir, "/consensus_clustering_individuals/PCA/clusters_components13.png"), width = 170, height = 170, units = "mm", res = 300)
 fviz_cluster(list(data = data_clean[,1:21], cluster = data_clean[,22]), 
              geom = "point", 
              ellipse.type = "convex", 
@@ -158,7 +146,9 @@ fviz_cluster(list(data = data_clean[,1:21], cluster = data_clean[,22]),
              ylab = paste("Component 3 (", round(summary(pca_result)$importance[2, 3] * 100, 1), "%)", sep = "")) + 
   ggtitle("") + 
   theme_minimal()
+dev.off()
 
+png(paste0(dataDir, "/consensus_clustering_individuals/PCA/clusters_components14.png"), width = 170, height = 170, units = "mm", res = 300)
 fviz_cluster(list(data = data_clean[,1:21], cluster = data_clean[,22]), 
              geom = "point", 
              ellipse.type = "convex", 
@@ -168,7 +158,9 @@ fviz_cluster(list(data = data_clean[,1:21], cluster = data_clean[,22]),
              ylab = paste("Component 4 (", round(summary(pca_result)$importance[2, 4] * 100, 1), "%)", sep = "")) + 
   ggtitle("") + 
   theme_minimal()
+dev.off()
 
+png(paste0(dataDir, "/consensus_clustering_individuals/PCA/clusters_components23.png"), width = 170, height = 170, units = "mm", res = 300)
 fviz_cluster(list(data = data_clean[,1:21], cluster = data_clean[,22]), 
              geom = "point", 
              ellipse.type = "convex", 
@@ -178,7 +170,9 @@ fviz_cluster(list(data = data_clean[,1:21], cluster = data_clean[,22]),
              ylab = paste("Component 3 (", round(summary(pca_result)$importance[2, 3] * 100, 1), "%)", sep = "")) + 
   ggtitle("") + 
   theme_minimal()
+dev.off()
 
+png(paste0(dataDir, "/consensus_clustering_individuals/PCA/clusters_components24.png"), width = 170, height = 170, units = "mm", res = 300)
 fviz_cluster(list(data = data_clean[,1:21], cluster = data_clean[,22]), 
              geom = "point", 
              ellipse.type = "convex", 
@@ -188,7 +182,9 @@ fviz_cluster(list(data = data_clean[,1:21], cluster = data_clean[,22]),
              ylab = paste("Component 4 (", round(summary(pca_result)$importance[2, 4] * 100, 1), "%)", sep = "")) + 
   ggtitle("") + 
   theme_minimal()
+dev.off()
 
+png(paste0(dataDir, "/consensus_clustering_individuals/PCA/clusters_components34.png"), width = 170, height = 170, units = "mm", res = 300)
 fviz_cluster(list(data = data_clean[,1:21], cluster = data_clean[,22]), 
              geom = "point", 
              ellipse.type = "convex", 
@@ -198,25 +194,64 @@ fviz_cluster(list(data = data_clean[,1:21], cluster = data_clean[,22]),
              ylab = paste("Component 4 (", round(summary(pca_result)$importance[2, 4] * 100, 1), "%)", sep = "")) + 
   ggtitle("") + 
   theme_minimal()
+dev.off()
 
-
-# Inspect component loadings
-# Figure 4
+# Plot component loadings
+png(paste0(dataDir, "/consensus_clustering_individuals/PCA/clusters_component_loadings_12.png"), width = 170, height = 170, units = "mm", res = 300)
 fviz_pca_var(pca_result, col.var = "contrib", gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"), axes = c(1,2))
-# Additional figures
+dev.off()
+png(paste0(dataDir, "/consensus_clustering_individuals/PCA/clusters_component_loadings_13.png"), width = 170, height = 170, units = "mm", res = 300)
 fviz_pca_var(pca_result, col.var = "contrib", gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"), axes = c(1,3))
+dev.off()
+png(paste0(dataDir, "/consensus_clustering_individuals/PCA/clusters_component_loadings_14.png"), width = 170, height = 170, units = "mm", res = 300)
 fviz_pca_var(pca_result, col.var = "contrib", gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"), axes = c(1,4))
+dev.off()
+png(paste0(dataDir, "/consensus_clustering_individuals/PCA/clusters_component_loadings_23.png"), width = 170, height = 170, units = "mm", res = 300)
 fviz_pca_var(pca_result, col.var = "contrib", gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"), axes = c(2,3))
+dev.off()
+png(paste0(dataDir, "/consensus_clustering_individuals/PCA/clusters_component_loadings_24.png"), width = 170, height = 170, units = "mm", res = 300)
 fviz_pca_var(pca_result, col.var = "contrib", gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"), axes = c(2,4))
+dev.off()
+png(paste0(dataDir, "/consensus_clustering_individuals/PCA/clusters_component_loadings_34.png"), width = 170, height = 170, units = "mm", res = 300)
 fviz_pca_var(pca_result, col.var = "contrib", gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"), axes = c(3,4))
+dev.off()
 
-# Visualize the contribution of the variables contributing to these dimensions
-# Figure 5
+# Visualize the contribution of the variables contributing to these dimensions (Figure 5)
+png(paste0(dataDir, "/consensus_clustering_individuals/PCA/component1_contributions.png"), width = 170, height = 170, units = "mm", res = 300)
 fviz_contrib(pca_result, choice = "var", axes = 1) + ggtitle("")  + theme_minimal() +   theme(axis.text.x = element_text(angle = 45, hjust = 1)) + xlab("Physical behavior estimate") # Dimension 1 (x-axis)
+dev.off()
+png(paste0(dataDir, "/consensus_clustering_individuals/PCA/component2_contributions.png"), width = 170, height = 170, units = "mm", res = 300)
 fviz_contrib(pca_result, choice = "var", axes = 2)+ ggtitle("")  + theme_minimal()+   theme(axis.text.x = element_text(angle = 45, hjust = 1)) + xlab("Physical behavior estimate")# Dimension 2 (y-axis)
+dev.off()
+png(paste0(dataDir, "/consensus_clustering_individuals/PCA/component3_contributions.png"), width = 170, height = 170, units = "mm", res = 300)
 fviz_contrib(pca_result, choice = "var", axes = 3)+ ggtitle("")  + theme_minimal()+   theme(axis.text.x = element_text(angle = 45, hjust = 1))+xlab("Physical behavior estimate")# Dimension 3
+dev.off()
+png(paste0(dataDir, "/consensus_clustering_individuals/PCA/component4_contributions.png"), width = 170, height = 170, units = "mm", res = 300)
 fviz_contrib(pca_result, choice = "var", axes = 4)+ ggtitle("")  + theme_minimal()+   theme(axis.text.x = element_text(angle = 45, hjust = 1))+xlab("Physical behavior estimate")# Dimension 4
+dev.off()
 
+### Cluster differences
+################################################################################
+# Calculate the mean of each variable for each cluster
+cluster_summary <- aggregate(data_clusters, by = list(cluster_labels), function(x) mean(x, na.rm = TRUE))
+colnames(cluster_summary) <- c("cluster", names(data))
+
+table(data$Ybg, cluster_labels) # 1 = boys, 0 = girls
+
+# Heatmap (Figure 6)
+data_matrix <- as.matrix(cluster_summary[,-1])
+rownames(data_matrix) <- cluster_summary$cluster
+x <- rep(0, 5)
+y <- rep(0, 5)
+z <- rep(0, 5)
+xy <- rep(0, 5)
+matrix <- cbind(as.matrix(cluster_summary[,2:7]), x, as.matrix(cluster_summary[,8:11]), y, 
+                as.matrix(cluster_summary[,12:18]), z, as.matrix(cluster_summary[,19:20]), xy, as.matrix(cluster_summary[,21:22]))
+colnames(matrix)[c(7,12,20, 23)] <- c("", " ", "  ", "   ") # Remove labels for x, y, z, xy
+
+png(paste0(dataDir, "/consensus_clustering_individuals/Figure6.png"), width = 170, height = 170, units = "mm", res = 300)
+edgeHeat(t(matrix)) + theme_minimal()
+dev.off()
 
 # Test for differences in variables between clusters using ANOVA 
 for (var in colnames(data)) {
@@ -243,8 +278,11 @@ summary(glm(as.factor(Ybg) ~ as.factor(cluster_labels), data = data_clusters, fa
 anova(glm(as.factor(Ybg) ~ as.factor(cluster_labels), data = data_clusters, family = "binomial"), test="Chisq")
 
 ################################################################################
-# Correlation between physcial behavior estimates
+# Correlation between physical behavior estimates
 ################################################################################
+if(!dir.exists(paste0(dataDir, "/correlation_analyses"))){
+  dir.create(paste0(dataDir, "/correlation_analyses"))
+}
 # Compute correlation matrix
 Xall <- cbind(Xmot[,1:6], rnorm(nrow(Xmot), sd=0.000001), Xmot[,7:10], rnorm(nrow(Xmot), sd=0.000001), 
               Xvol[,c(1,2,3,4,6,7,5)], rnorm(nrow(Xmot), sd=0.000001), Xcom)
@@ -255,8 +293,7 @@ corMatAll[c(7,12,20),] <- 0
 corMatAll[,c(7,12,20)] <- 0
 
 # Figure7
-pdf("heatmap_correlationAmongMetrics.pdf")
-png("heatmap_correlationAmongMetrics.png")
+png(paste0(dataDir, "/correlation_analyses/Figure7.png"), width = 170, height = 170, units = "mm", res = 300)
 edgeHeat(corMatAll)
 dev.off()
 
@@ -273,42 +310,54 @@ xtable_obj <- xtable(cor_matrix_df, caption = "Correlation Matrix", label = "tab
 print(xtable_obj, type = "latex", booktabs = TRUE, na.string = "") # Print the LaTeX code
 
 
+################################################################################
 # Consensus clustering of physical behavior estimates
-
+################################################################################
+if(!dir.exists(paste0(dataDir, "/consensus_clustering_estimates"))){
+  dir.create(paste0(dataDir, "/consensus_clustering_estimates"))
+}
 dist_matrix_vars <- pairwise_dist(t(data[,1:19]))
-
- cluster_vars <- ConsensusClusterPlus(
-  d=pairwise_dist(t(data[,1:19])), maxK = 10, reps=1000, pItem=0.8, pFeature = 1, clusterAlg="km",title="consensus_clustering_vars",
-   distance="euclidean", seed = 12345, plot = "png", verbose = TRUE)
- save(cluster_vars, file = paste0(dataDir, "rerun/consensus_clustering_vars/cluster_results.RData"))
-
-load(paste0(dataDir, "/consensus_clustering_vars/cluster_results.RData"))
+if(!file.exists(paste0(dataDir, "/consensus_clustering_estimates/cluster_results.RData"))){ # only run if not performed before as it is computationally expensive
+  cluster_vars <- ConsensusClusterPlus(
+    d=dist_matrix_vars, maxK = 10, reps=1000, pItem=0.8, pFeature = 1, clusterAlg="km",title="consensus_clustering_vars",
+    distance="euclidean", seed = 12345, plot = "png", verbose = TRUE)
+  save(cluster_vars, file = paste0(dataDir, "/consensus_clustering_estimates/cluster_estimates.RData"))
+} else{
+  load(paste0(dataDir, "/consensus_clustering_estimates/cluster_estimates.RData"))
+}
 
 # Cluster analyses statistics
-icl_var = calcICL(cluster_vars,title="consensus_clustering_vars",plot="png",writeTable=TRUE)
+icl_var = calcICL(cluster_vars,title="consensus_clustering_estimates",plot="png",writeTable=TRUE)
 inter_cluster_consensus_var <- aggregate(clusterConsensus ~ k, data = icl_var$clusterConsensus, mean)
 intra_cluster_consensus_var <- aggregate(itemConsensus ~ k, data = icl_var$itemConsensus, mean)
 pac_var <- aggregate(itemConsensus ~ k, data = icl_var$itemConsensus, function(x) mean(x > 0.05 & x < 0.95))
 
-#Check number of clusters
+# Perform k-means clustering
+png(paste0(dataDir, "/consensus_clustering_estimates/kmeans_Elbow.png"), width = 170, height = 170, units = "mm", res = 300)
 fviz_nbclust(dist_matrix_vars, kmeans, method = "wss") # Elbow method
+dev.off()
+png(paste0(dataDir, "/consensus_clustering_estimates/kmeans_Silhouette.png"), width = 170, height = 170, units = "mm", res = 300)
 fviz_nbclust(dist_matrix_vars, kmeans, method = "silhouette") # Silhouette method
+dev.off()
+png(paste0(dataDir, "/consensus_clustering_estimates/kmeans_Gap.png"), width = 170, height = 170, units = "mm", res = 300)
 fviz_nbclust(dist_matrix_vars, kmeans, method = "gap_stat") # Gap statistic
+dev.off()
 
 # Perform hierarchical clustering
 hc <- hclust(as.dist(dist_matrix_vars), method = "ward.D2")
+png(paste0(dataDir, "/consensus_clustering_estimates/hierarchical_dendrogram.png"), width = 170, height = 170, units = "mm", res = 300)
 fviz_dend(hc, k = 6, rect = TRUE, show_labels = FALSE)
-# 5 clusters is optimal according to both methods
+dev.off()
 
-# Analyze clusters (descriptive statistics and differences)
-################################################################################
-# Calculate the mean of each variable for each cluster
+# 6 clusters is optimal according to both methods -- Assign cluster labels
 cluster_labels_vars <- cluster_vars[[6]]$consensusClass
 
 ################################################################################
 # regression analysis of sex (boys vs girls)
 ################################################################################
-
+if(!dir.exists(paste0(dataDir, "/regression_analyses"))){
+  dir.create(paste0(dataDir, "/regression_analyses"))
+}
 pseudo_r_squared <- function(model) {
   1 - sum(resid(model)^2, na.rm = TRUE) / sum((model$model[,1] - mean(model$model[,1], na.rm = TRUE))^2, na.rm = TRUE)
 }
@@ -334,7 +383,6 @@ rownames(glmRes_sex) <- names(X)
 table_sex <- xtable(glmRes_sex, caption = "Simple linear regression results with sex as dependent variable", label = "tab:regression_sex")
 print(table_sex, type = "latex") # Print the xtable object as LaTeX code
 
-# Figure 8
 # diagnostic of logistic regression (single probs in model)
 nBins <- 9
 ps <- matrix(NA, nBins+1, ncol(X))
@@ -354,7 +402,7 @@ rownames(psMod) <- c("0-10th percentile", "10-20th percentile", "20-30th percent
                      "30-40th percentile", "40-50th percentile", "50-60th percentile", 
                      "60-70th percentile", "70-80th percentile", "80-90th percentile", 
                      "90-100th percentile")
-pdf("heatmap_binBGratio2variable.png")
+png(paste0(dataDir, "/regression_analyses/Figure8.png"), width = 170, height = 170, units = "mm", res = 300)
 edgeHeat(as.matrix(psMod)*-1)
 dev.off()
 
