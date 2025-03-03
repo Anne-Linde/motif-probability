@@ -253,6 +253,7 @@ validfiles <- validfiles[-which(validfiles == "3589-2_3APR12.RData")]
 
 ### STEP 2: Segments the accelerometer data by fitting hidden semi-Markov models for each file
 ## a) Generate mhsmm data for validfiles
+
 for(f in 1:length(validfiles)){
   cat(f)
   load(paste0(validdatadir, validfiles[f]))
@@ -277,7 +278,7 @@ for(f in 1:length(validfiles)){
 }
 
 ## b) Fit hsmms per individual
-#install.packages("DescTools")
+devtools::source_url("https://raw.githubusercontent.com/Anne-Linde/motif-probability/refs/heads/main/inst/researchcode/functions/derive_initialparams.R")
 library(mhsmm)
 
 sequencedir <- paste0(validdatadir, "mhsmmdata/models/")
@@ -287,12 +288,6 @@ qMax <- 15 # Maximum number of iterations
 dMax <- (60*60) / epoch # Maximum state duration of 240 15-sec epochs, corresponds to 60 minutes - as was set in van Kuppevelt et al. (2019)
 boutDurations <- c(30, 10, 5) # Note that the duration of the first bout has to be non-zero (as lambda is required to be > 0)
 variable_name <- "HFENplus" #metric for training hsmm
-
-# Load functions required for hsmm
-# Note that these functions are also moved to the researchcode folder
-r_files <- list.files(path = "//vumc.nl/afd$/DIV10/POH/Sectie_2/2016_SB and PA pattern analysis/Team Annelinde/Physcial behavior patterns/Physical behavior patterns/R"
-                      , pattern = [file://.R$]\\.R$, full.names = TRUE)
-lapply(r_files, source)
 
 files <- list.files(path = paste0(validdatadir, "mhsmmdata/"), pattern = ".RData")
 

@@ -18,6 +18,7 @@ library(robustbase)
 library(effsize)
 library(xtable)
 library(devtools)
+devtools::source_url("https://raw.githubusercontent.com/Anne-Linde/motif-probability/refs/heads/main/inst/researchcode/functions/ConsensusClusterPlus.R")
 
 ################################################################################
 # Structure data
@@ -64,7 +65,6 @@ X <- data[,-c(20:21)]
 ################################################################################
 # Consensus clustering of similar physical behavior patterns (individuals)
 ################################################################################
-devtools::source_url("https://raw.githubusercontent.com/Anne-Linde/motif-probability/refs/heads/test_functions/R/ConsensusClusterPlus.R")
 if(!dir.exists(paste0(dataDir, "/consensus_clustering_individuals"))){
   dir.create(paste0(dataDir, "/consensus_clustering_individuals"))
 }

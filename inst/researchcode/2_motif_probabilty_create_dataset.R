@@ -7,19 +7,9 @@
 library(haven)
 library(dplyr)
 library(TSEntropies)
-
-devtools::source_url("https://raw.githubusercontent.com/Anne-Linde/motif-probability/refs/heads/main/inst/researchcode/ConsensusClusterPlus.R")
-
-# Load package functions
-## TO DO: install package!
-rDir <- "/Users/annelindelettink/Documents/Work MacBook Pro Annelinde/My Little Moves (MLM)/Sequence mapping/Physical behavior patterns/motif-probability/R/"
-setwd(rDir)
-source("durationProbability.R")
-source("accelerationProbability.R")
-source("motifProbability.R")
-source("defineMotif.R")
-source("calculateMotifProbabilities.R")
-devtools::source_url("https://raw.githubusercontent.com/Anne-Linde/motif-probability/refs/heads/main/inst/researchcode/lempel_ziv_complexity.R")
+devtools::install_github("Anne-Linde/motif-probability", force = TRUE)
+library(motifprobability)
+devtools::source_url("https://raw.githubusercontent.com/Anne-Linde/motif-probability/refs/heads/main/inst/researchcode/functions/lempel_ziv_complexity.R")
 
 ### User input required:
 hsmmDir <- "/Users/annelindelettink/GECKO/preprocessing/manuscript/subset/output_rawinput_5years_complete_anthro/epochdata/validdata/mhsmmdata/models" # Contains the fitted HSMMs (obtained by running script: 1_preprocess_segment_accelerometer_data.R)
