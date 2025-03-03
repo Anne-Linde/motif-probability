@@ -28,7 +28,7 @@ calculateMotifProbabilities <- function(motifs, filepath) {
     # Calculate motif probabilities for file
     for (motif_idx in 1:length(motifs)) {
       motif <- get(motifs[motif_idx])
-      
+      probabilities[pp, 1] <- filelist[pp]
       # Calculate motif probability and sum probabilities for each length
       ps <- exp(motifProbability(motif, hsmms))
       
@@ -37,10 +37,9 @@ calculateMotifProbabilities <- function(motifs, filepath) {
     }
     
   }
-  probabilities <- cbind(filelist[pp], probabilities)
-  colnames(probabilities) <- c("id", motifs)
   probabilities <- as.data.frame(probabilities)
-  probabilities[, 2:length(motifs)+1] <- lapply(probabilities[, 2:length(motifs)+1], function(x) as.numeric(as.character(x))) # Convert motif probabilities to numeric
+  colnames(probabilities) <- c("id", motifs)
+  probabilities[, 2:(length(motifs) + 1)] <- apply(probabilities[, 2:(length(motifs) + 1)], 2, function(x) as.numeric(as.character(x)))
   
   return(probabilities)
 }
