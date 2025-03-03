@@ -15,7 +15,6 @@ Maintainer: Annelinde Lettink <a.lettink@amsterdamumc.nl>
 Description: For evaluating the probability of sequences of bouts (each characterised by acceleration ranges and their lengths) using a forward algorithm of the hidden semi-Markov model.
 URL: https://github.com/Anne-Linde/motif-probability
 License: Apache License version 2.0 | file LICENSE
-Imports: pnorm
 Depends: stats, R (>= 3.5.0)
 NeedsCompilation: no
 Roxygen: list(markdown = TRUE)
