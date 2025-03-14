@@ -4,7 +4,7 @@ The code in this repository corresponds to our motif probability methodology for
 The probability of a specific physical behavior sequence in the data can be calculated using the forward algorithm of the hidden semi-Markov model (HSMM). This algorithm requires 2 inputs:
 
 1. User-defined motif(s)
-The motif probability is defined as the likelihood that a specific sequence of bouts, each characterized by acceleration ranges = [Amin, Amax] and their corresponding duration in minutes (L), occurs within the accelerometer data. 
+The motif probability is defined as the likelihood that a specific sequence of bouts, each characterized by acceleration ranges = (Amin, Amax) and their corresponding duration in minutes (L), occurs within the accelerometer data. 
 
 For example the hypothetical motif:
 
