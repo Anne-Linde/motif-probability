@@ -1,6 +1,6 @@
 #' motifProbability
 #'
-#' @description 'motifProbability' Calculates the probability that a specific sequence of bouts (motif) occurs within the accelerometer data, based on the parameters of the fitted hidden semi-Markov model (hsmm) using the forward algorithm.
+#' @description 'motifProbability' Calculates the probability (on the log-scale) that a specific sequence of bouts (motif) occurs within the accelerometer data, based on the parameters of the fitted hidden semi-Markov model (hsmm) using the forward algorithm.
 #'
 #' @param motif A motif is defined as a sequence of bouts, each characterized by their acceleration range and duration. A data.frame object where each rows represent a bout, with columns Amin, Amax, and length.
 #' @param hsmm An object containing the Hidden Semi-Markov Model (HSMM) parameters of class 'hsmm'.
